@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>🍱便當備餐小幫手</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#faf6f0;--card:#fff;--ink:#3d2c29;--sub:#7a625a;--line:#ebdcd5;--acc:#e05a47;--honey:#f2994a;--mk:#fff9f2;--sea:#e2f5ea;--seat:#27ae60;--fh:"Huninn","jf-openhuninn","Noto Sans TC",sans-serif;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1f1a18;--card:#2b2421;--ink:#f3e9e4;--sub:#c1aca4;--line:#4a3d38;--mk:#33281f;--sea:#1d3a2a;--seat:#6fd39a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1f1a18;--card:#2b2421;--ink:#f3e9e4;--sub:#c1aca4;--line:#4a3d38;--mk:#33281f;--sea:#1d3a2a;--seat:#6fd39a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",sans-serif;line-height:1.6}
+.wrap{max-width:960px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+h1{font-family:var(--fh);font-size:26px;margin:0;color:var(--acc)}
+.nav-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab-btn{cursor:pointer;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;font-size:13.5px;font-family:var(--fh)}
+.tab-btn.active{background:var(--acc);color:#fff;border-color:var(--acc)}
+.categories{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:20px}
+.cat-chip{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--sub);border-radius:20px;padding:6px 14px;font-size:13.5px;white-space:nowrap}
+.cat-chip.active{background:var(--honey);color:#fff;border-color:var(--honey)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.card{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:16px;cursor:pointer;transition:transform .1s}
+.card:hover{border-color:var(--acc);transform:translateY(-2px)}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start}
+.card-title{font-family:var(--fh);font-size:18px;margin:0 0 6px;display:inline-block}
+.emoji-icon{font-family:"Noto Color Emoji",sans-serif;font-size:30px;margin-right:8px}
+.fav-btn{background:none;border:none;font-size:22px;cursor:pointer;padding:0}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px}
+.badge{font-size:11.5px;padding:2px 8px;border-radius:10px;background:var(--bg);color:var(--sub)}
+.badge.season{background:var(--sea);color:var(--seat);font-weight:bold}
+.plan-section{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:20px;margin-bottom:20px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px}
+.form-group label{display:block;font-size:13.5px;color:var(--sub);margin-bottom:6px}
+.form-group select,.form-group input[type=number]{width:100%;padding:8px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;background:var(--bg);color:var(--ink)}
+.row{display:flex;gap:6px}
+.checkbox-group{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:14px}
+.checkbox-group label{display:flex;align-items:center;gap:4px;cursor:pointer;margin:0;color:var(--ink)}
+.market-list{background:var(--mk);border:1.5px solid var(--honey);border-radius:14px;padding:16px;margin-top:14px}
+.market-item{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0;font-size:14px}
+.gen-btn{background:var(--acc);color:#fff;border:none;padding:10px 20px;border-radius:10px;font-family:var(--fh);font-size:15px;cursor:pointer;width:100%;margin-top:10px}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10;justify-content:center;align-items:center;padding:16px}
+.modal-content{background:var(--card);border-radius:20px;max-width:500px;width:100%;padding:24px;position:relative;max-height:90vh;overflow-y:auto}
+.close-modal{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink)}
+.day-plan-card{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;font-size:14px}
+.meal{margin:6px 0 10px}.meal small{display:block;color:var(--sub);font-size:12px}
+.tip{font-size:13px;background:var(--mk);border-left:4px solid var(--honey);padding:8px 10px;border-radius:8px;margin:8px 0}
+.sum{font-size:13.5px;background:var(--bg);border-radius:12px;padding:12px;margin-bottom:12px}
+.empty{text-align:center;color:var(--sub);padding:40px 10px}
+#toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:20px;font-size:13px;display:none;z-index:20}
+@media print{header,#page-recipes,#page-favs,#plan-form,.noprint,#toast{display:none!important}:root:root:root{--bg:#fff;--card:#fff;--ink:#000;--sub:#555;--line:#ccc;--mk:#fff}body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🍱便當備餐小幫手</h1>
+    <div class="nav-tabs">
+      <button class="tab-btn active" id="tab-recipes" onclick="switchTab('recipes')">📖 食譜庫</button>
+      <button class="tab-btn" id="tab-plan" onclick="switchTab('plan')">🛒 備餐與採買</button>
+      <button class="tab-btn" id="tab-favs" onclick="switchTab('favs')">❤️ 我的食譜庫 (<span id="fav-count">0</span>)</button>
+    </div>
+  </header>
+
+  <div id="page-recipes">
+    <div id="season-now" class="tip" style="margin-bottom:14px;"></div>
+    <div class="categories" id="cat-list"></div>
+    <div class="grid" id="recipe-grid"></div>
+  </div>
+
+  <div id="page-favs" style="display:none;">
+    <h2 style="font-family:var(--fh);margin-top:0;">❤️ 我的食譜庫</h2>
+    <div class="grid" id="fav-grid"></div>
+  </div>
+
+  <div id="page-plan" style="display:none;">
+    <div class="plan-section" id="plan-form">
+      <h2 style="font-family:var(--fh);margin-top:0;">⚙️ 身體資料與備餐設定</h2>
+      <div class="form-grid">
+        <div class="form-group"><label>備餐天數 (天)</label><input type="number" id="days" value="5" min="1" max="7"></div>
+        <div class="form-group"><label>每日備餐餐數</label>
+          <select id="meal-type"><option value="lunch">僅準備「午餐」</option><option value="both" selected>準備「午餐與晚餐」</option></select></div>
+        <div class="form-group"><label>健身目標</label>
+          <select id="goal"><option value="cut">🔥 減脂期（熱量赤字）</option><option value="bulk">💪 增肌期（熱量盈餘）</option></select></div>
+        <div class="form-group"><label>生理性別 / 年齡</label>
+          <div class="row"><select id="gender" style="width:50%;"><option value="male">男</option><option value="female">女</option></select>
+          <input type="number" id="age" value="28" min="14" max="90" style="width:50%;"></div></div>
+        <div class="form-group"><label>身高 (cm) / 體重 (kg)</label>
+          <div class="row"><input type="number" id="height" value="165" min="120" max="230" style="width:50%;">
+          <input type="number" id="weight" value="65" min="30" max="200" style="width:50%;"></div></div>
+        <div class="form-group"><label>日常活動量</label>
+          <select id="act"><option value="1.2">久坐（幾乎不運動）</option><option value="1.375">輕度（每週運動 1–3 天）</option><option value="1.55" selected>中度（每週運動 3–5 天）</option><option value="1.725">高度（每週運動 6–7 天）</option></select></div>
+        <div class="form-group"><label>本週要買幾種蛋白質食材</label><select id="k-prot"><option value="0">不限（菜色最豐富）</option><option value="1">1 種</option><option value="2" selected>2 種</option><option value="3">3 種</option><option value="4">4 種</option></select></div>
+        <div class="form-group"><label>本週要買幾種蔬菜</label><select id="k-veg"><option value="0">不限（菜色最豐富）</option><option value="2">2 種</option><option value="3" selected>3 種</option><option value="4">4 種</option><option value="5">5 種</option></select></div>
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>蛋白質偏好（可複選）</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="pref" value="雞肉" checked> 雞肉</label>
+          <label><input type="checkbox" name="pref" value="牛肉" checked> 牛肉</label>
+          <label><input type="checkbox" name="pref" value="豬肉" checked> 豬肉</label>
+          <label><input type="checkbox" name="pref" value="海鮮" checked> 蝦子/海鮮</label>
+          <label><input type="checkbox" name="pref" value="素食"> 純素 (豆腐/豆製品)</label>
+          <label><input type="checkbox" name="pref" value="蛋奶素"> 蛋奶素 (含蛋/乳製品)</label>
+        </div>
+        <div style="font-size:12.5px;color:var(--sub);margin-top:6px;">💡 有勾選肉類／海鮮時，豆腐、蛋與乳製品也會一起排進菜單；只想吃素的話，請只勾選「純素」或「蛋奶素」。</div>
+        <div class="checkbox-group"><label><input type="checkbox" id="prefer-fav"> ❤️ 優先選用我的食譜庫</label><label><input type="checkbox" id="prefer-season" checked> 🌱 優先選用當季食材</label></div>
+      </div>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>主食偏好（可複選；只勾「飯類」就是每餐都吃飯）</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="carb" value="rice" checked> 🍚 飯類</label>
+          <label><input type="checkbox" name="carb" value="noodle" checked> 🍜 麵類</label>
+          <label><input type="checkbox" name="carb" value="tuber" checked> 🍠 薯類（地瓜、玉米、馬鈴薯）</label>
+        </div>
+        <select id="white-mode" style="margin-top:8px;"><option value="mix" selected>糙米／全穀為主，白米白麵約 1/3（建議）</option><option value="any">不限，可以全部吃白米白麵</option><option value="whole">只要全穀，不排白米白麵</option></select>
+      </div>
+      <button class="gen-btn" onclick="generatePlan()">✨ 生成營養均衡菜單與採買清單</button>
+    </div>
+
+    <div class="plan-section" id="plan-result-box" style="display:none;">
+      <h3 style="font-family:var(--fh);margin-top:0;" id="result-title"></h3>
+      <div class="sum" id="plan-summary"></div>
+      <div id="selected-recipes-list"></div>
+      <div class="market-list">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;"><h3 style="font-family:var(--fh);margin:0;color:var(--honey);">🛒 菜市場合併總採買清單</h3><span class="noprint"><button class="tab-btn" onclick="copyList()">📋 複製清單</button> <button class="tab-btn" onclick="printPlan()">🖨️ 列印菜單與清單</button></span></div>
+        <div id="shopping-ingredients"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="recipe-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-content"><button class="close-modal" onclick="closeModal()">✕</button><div id="modal-body"></div></div>
+</div>
+<div style="text-align:center;font-size:12px;color:var(--sub);padding:0 16px 40px;">⚠️ 熱量與份量為估算值；食材請依個人過敏與飲食需求自行判斷。<br>🌱 當季資料整理自農糧署《臺灣主要水果產期分布》與農委會（現農業部）蔬菜產期資料；葡萄柚、草莓、西瓜、山藥及其他標示「公開資料整理」的品項僅供參考。產期會因品種、產區與天候而不同。</div>
+<div id="toast"></div>
+
+<!-- 食譜與產季資料 -->
+<script src="recipes.js"></script>
+<script>
+var currentCat="全部",view="recipes",openId=null,favorites=[];
+try{favorites=JSON.parse(localStorage.getItem("bento_favs")||"[]")}catch(e){}
+function saveFavs(){try{localStorage.setItem("bento_favs",JSON.stringify(favorites))}catch(e){}}
+function byId(id){return RECIPES.filter(function(r){return r.id===id})[0]}
+function kc(r,s){var t=0;for(var k in r.x)t+=r.x[k]*KCAL[k]*(s||1);return t}
+function pr(r,s){var t=0;for(var k in r.x)t+=r.x[k]*PRO[k]*(s||1);return t}
+function toast(t){var e=document.getElementById("toast");e.textContent=t;e.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(function(){e.style.display="none"},1600)}
+
+function toggleFav(id,ev){
+  if(ev)ev.stopPropagation();
+  var i=favorites.indexOf(id);
+  if(i>-1){favorites.splice(i,1);toast("已從「我的食譜庫」移除")}
+  else{favorites.push(id);toast("❤️ 已加入「我的食譜庫」")}
+  saveFavs();refresh();
+}
+function refresh(){
+  document.getElementById("fav-count").textContent=favorites.length;
+  if(view==="recipes")renderRecipes();
+  if(view==="favs")renderFavs();
+  if(openId)updateModalFav();
+}
+function switchTab(t){
+  view=t;
+  ["recipes","plan","favs"].forEach(function(n){
+    document.getElementById("page-"+n).style.display=n===t?"block":"none";
+    document.getElementById("tab-"+n).classList.toggle("active",n===t);
+  });
+  refresh();
+}
+function renderCategories(){
+  document.getElementById("cat-list").innerHTML=CATEGORIES.map(function(c){
+    return '<button class="cat-chip '+(c===currentCat?"active":"")+'" onclick="filterCat(\''+c+'\')">'+c+'</button>'}).join("");
+}
+function filterCat(c){currentCat=c;renderCategories();renderRecipes()}
+function cardHtml(r){
+  var f=favorites.indexOf(r.id)>-1;
+  return '<div class="card" onclick="openRecipeModal('+r.id+')"><div class="card-header"><div><span class="emoji-icon">'+r.emoji+'</span><h3 class="card-title">'+r.name+'</h3></div>'+
+  '<button class="fav-btn" aria-label="收藏" onclick="toggleFav('+r.id+',event)">'+(f?"❤️":"🤍")+'</button></div>'+
+  '<div class="badges"><span class="badge">'+r.cat+'</span>'+seasonBadge(r)+
+  '<span class="badge">約 '+Math.round(kc(r))+' kcal</span></div>'+
+  '<div style="font-size:13px;color:var(--sub);">點擊查看完整食譜與作法 ➔</div></div>';
+}
+function renderRecipes(){
+  document.getElementById("recipe-grid").innerHTML=RECIPES.filter(function(r){return currentCat==="全部"||r.cat===currentCat}).map(cardHtml).join("");
+}
+function renderFavs(){
+  var l=RECIPES.filter(function(r){return favorites.indexOf(r.id)>-1});
+  document.getElementById("fav-grid").innerHTML=l.length?l.map(cardHtml).join(""):
+  '<div class="empty" style="grid-column:1/-1;">還沒有收藏的食譜<br>到「食譜庫」點 🤍 就能加進來囉！</div>';
+}
+function openRecipeModal(id){
+  var r=byId(id);if(!r)return;openId=id;
+  var ing=r.ingredients.map(function(i){return "<li>"+i.n+"："+i.q+i.u+"</li>"}).join("");
+  var ex=Object.keys(r.x).map(function(k){return NAMES[k]+" "+r.x[k]+" 份"}).join("、");
+  document.getElementById("modal-body").innerHTML=
+  '<h2 style="font-family:var(--fh);margin-top:0;padding-right:30px;">'+r.emoji+" "+r.name+"</h2>"+
+  '<p><span class="badge">'+r.cat+"</span> "+seasonBadge(r)+"</p>"+
+  seasonLine(r)+'<button class="tab-btn" id="modal-fav" onclick="toggleFav('+r.id+')"></button>'+
+  '<p style="font-size:13px;color:var(--sub);">🔢 食物代換：'+ex+"｜約 "+Math.round(kc(r))+" kcal、蛋白質 "+Math.round(pr(r))+" g</p>"+
+  '<h4 style="font-family:var(--fh);margin:12px 0 4px;color:var(--acc);">📦 食材清單</h4><ul style="margin:0;padding-left:20px;font-size:14px;">'+ing+"</ul>"+
+  '<h4 style="font-family:var(--fh);margin:12px 0 4px;color:var(--acc);">🍳 烹調與作法步驟</h4>'+
+  '<p style="font-size:14px;background:var(--bg);padding:10px;border-radius:10px;">'+r.steps+"</p>"+
+  (r.alt?'<div class="tip"><b>💡 沒有舒肥棒也能做：</b><br>'+r.alt+"</div>":"");
+  updateModalFav();
+  document.getElementById("recipe-modal").style.display="flex";
+}
+function updateModalFav(){
+  var b=document.getElementById("modal-fav");if(!b)return;
+  var f=favorites.indexOf(openId)>-1;
+  b.textContent=f?"❤️ 已在我的食譜庫（點擊移除）":"🤍 加入我的食譜庫";
+  b.className="tab-btn"+(f?" active":"");
+}
+function closeModal(){openId=null;document.getElementById("recipe-modal").style.display="none"}
+
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+function picker(pool,favFirst){
+  var q=[],last=null;
+  return function(){
+    if(!q.length){
+      q=shuffle(pool);
+      var sc=function(r){return (favFirst&&favorites.indexOf(r.id)>-1?0:2)+(SEAS_FIRST&&seasonInfo(r).now?0:1)};
+      if(favFirst||SEAS_FIRST)q.sort(function(a,b){return sc(a)-sc(b)});
+      else if(q.length>1&&q[0]===last)q.push(q.shift());
+    }
+    last=q.shift();return last;
+  };
+}
+function num(id,d,lo,hi){var v=parseFloat(document.getElementById(id).value);return isNaN(v)?d:Math.min(hi,Math.max(lo,v))}
+function r1(n){return Math.round(n*10)/10}
+
+var ROLE={"全穀雜糧類":"carb","豆魚蛋肉類":"prot","蔬菜類":"veg","水果類":"fruit"};
+function mainOf(r){return r.main||r.ingredients[0].n}
+function gOf(i,r){return i.g==="v"?"veg":SEAS.indexOf(i.n)>-1?"sea":(ROLE[r.cat]||"extra")}
+function fmtQ(i){var q=i.q;return (i.u==="g"||i.u==="ml")?(q>=10?Math.ceil(q/5)*5:Math.ceil(q)):(i.u==="顆"&&q<1?r1(q):Math.ceil(q))}
+// 依「主食材」分組，只挑 k 種食材（食譜多的食材被選中機率較高，收藏的食譜加權）
+function chooseMains(pool,k,favFirst){
+  var g={};pool.forEach(function(r){var m=mainOf(r);(g[m]=g[m]||[]).push(r)});
+  var keys=Object.keys(g),out=[];
+  if(!k||keys.length<=k)return pool;
+  while(out.length<k&&keys.length){
+    var ws=keys.map(function(m){return g[m].length+(SEAS_FIRST&&seasonInfo(g[m][0]).now?4:0)+(favFirst?2*g[m].filter(function(r){return favorites.indexOf(r.id)>-1}).length:0)});
+    var t=ws.reduce(function(a,b){return a+b},0)*Math.random(),i=0;
+    while(i<ws.length-1&&t>=ws[i]){t-=ws[i];i++}
+    out.push(keys.splice(i,1)[0]);
+  }
+  return pool.filter(function(r){return out.indexOf(mainOf(r))>-1});
+}
+// 主食：依勾選的飯／麵／薯類篩選，並控制白米白麵比例
+function makeCarb(lean,favFirst){
+  var kinds=[];document.querySelectorAll('input[name="carb"]:checked').forEach(function(e){kinds.push(e.value)});
+  var mode=document.getElementById("white-mode").value;
+  var all=RECIPES.filter(function(r){return r.cat==="全穀雜糧類"});
+  var p=all.filter(function(r){return kinds.indexOf(r.kind)>-1});if(!p.length)p=all;
+  var wp=chooseMains(p.filter(function(r){return r.whole}),lean?2:0,favFirst),bp=chooseMains(p.filter(function(r){return !r.whole}),lean?1:0,favFirst);
+  if(mode==="any")return picker(wp.concat(bp),favFirst);
+  var pw=picker(wp,favFirst),pb=picker(bp,favFirst),i=0;
+  return function(){i++;if(!wp.length)return pb();if(!bp.length||mode==="whole")return pw();return i%3===0?pb():pw()};
+}
+
+// 產季顯示（資料在 recipes.js 的 SEASON）
+var NOW=new Date().getMonth()+1,SEAS_FIRST=false;
+function parseM(s){if(s==="all")return null;var o=[];s.split(",").forEach(function(p){var a=p.split("-").map(Number),b=a.length>1?a[1]:a[0],i=a[0];for(var n=0;n<13;n++){o.push(i);if(i===b)break;i=i%12+1}});return o}
+function fmtM(s){return s==="all"?"全年供應":s.replace(/-/g,"–").replace(/,/g,"、")+" 月"}
+function seasonInfo(r){var e=SEASON[mainOf(r)];if(!e)return {k:"unk",now:false};var m=parseM(e[0]);return {k:m?"seasonal":"all",now:!!m&&m.indexOf(NOW)>-1,e:e}}
+function seasonBadge(r){return seasonInfo(r).now?'<span class="badge season">🌱 '+NOW+' 月當季</span>':""}
+function seasonLine(r){var s=seasonInfo(r);if(s.k==="unk")return "";var e=s.e;
+  return '<p style="font-size:13px;color:var(--sub);margin:6px 0;">🗓️ 產季：'+fmtM(e[0])+(e[2]?"（"+e[2]+"）":"")+(s.now?"，現在正當季":"")+"｜來源："+SRC[e[1]]+"</p>"}
+function renderSeasonNow(){var f=[],v=[];
+  Object.keys(SEASON).forEach(function(k){var m=parseM(SEASON[k][0]);if(m&&m.indexOf(NOW)>-1)(SEASON[k][3]==="f"?f:v).push(k)});
+  document.getElementById("season-now").innerHTML="🌱 <b>"+NOW+" 月當季</b>（只列有明確產季的品項）<br>🍎 水果："+(f.join("、")||"—")+"<br>🥬 蔬菜："+(v.join("、")||"—")}
+
+var PLAN=null;
+function buildMeal(m){
+  var c=PLAN.ctx,carb=c.pc(),items=[c.pp(),c.pv(),m===0?c.pf():c.pe()];
+  var other=items.reduce(function(a,r){return a+kc(r)},0),ck=kc(carb);
+  var s=Math.min(2,Math.max(0.5,Math.round((c.perMeal-other)/ck*4)/4));
+  var all=[{r:carb,s:s}].concat(items.map(function(r){return {r:r,s:1}}));
+  var kcal=0,pro=0,ex={};
+  all.forEach(function(it){kcal+=kc(it.r,it.s);pro+=pr(it.r,it.s);for(var k in it.r.x)ex[k]=(ex[k]||0)+it.r.x[k]*it.s});
+  return {slot:m,all:all,kcal:kcal,pro:pro,ex:ex};
+}
+function generatePlan(){
+  var days=Math.round(num("days",5,1,7)),both=document.getElementById("meal-type").value==="both";
+  var goal=document.getElementById("goal").value,male=document.getElementById("gender").value==="male";
+  var age=num("age",28,14,90),h=num("height",165,120,230),w=num("weight",65,30,200),act=parseFloat(document.getElementById("act").value);
+  var prefs=[];document.querySelectorAll('input[name="pref"]:checked').forEach(function(e){prefs.push(e.value)});
+  var favFirst=document.getElementById("prefer-fav").checked;
+  var meat=["雞肉","牛肉","豬肉","海鮮"].some(function(p){return prefs.indexOf(p)>-1});
+  function ok(r){if(r.type==="素食")return prefs.length>0;if(r.type==="蛋奶素")return meat||prefs.indexOf("蛋奶素")>-1;return prefs.indexOf(r.type)>-1}
+  SEAS_FIRST=document.getElementById("prefer-season").checked;var kp=parseInt(document.getElementById("k-prot").value),kv=parseInt(document.getElementById("k-veg").value),lean=kp>0||kv>0;
+  var protP=chooseMains(RECIPES.filter(function(r){return r.cat==="豆魚蛋肉類"&&ok(r)}),kp,favFirst);
+  if(!protP.length){toast("請至少勾選一種蛋白質偏好");return}
+  function pool(f){return RECIPES.filter(f)}
+  var bmr=10*w+6.25*h-5*age+(male?5:-161),tdee=bmr*act;
+  var target=Math.max(bmr,tdee*(goal==="cut"?0.85:1.1));
+  PLAN={days:[],ctx:{
+    pc:makeCarb(lean,favFirst),pp:picker(protP,favFirst),
+    pv:picker(chooseMains(pool(function(r){return r.cat==="蔬菜類"}),kv,favFirst),favFirst),pf:picker(chooseMains(pool(function(r){return r.cat==="水果類"}),lean?2:0,favFirst),favFirst),
+    pe:picker(pool(function(r){return (r.cat==="乳製品類"&&ok(r))||r.cat==="油脂與堅果"}),favFirst),
+    perMeal:target*0.35,bmr:bmr,tdee:tdee,target:target,goal:goal,protGoal:w*(goal==="cut"?1.6:1.8),nProt:protP.length}};
+  for(var d=0;d<days;d++){var meals=[];for(var m=0;m<(both?2:1);m++)meals.push(buildMeal(m));PLAN.days.push(meals)}
+  renderPlan();
+  document.getElementById("plan-result-box").style.display="block";
+}
+function rerollMeal(d,m){
+  var old=PLAN.days[d][m],nm=old;
+  for(var i=0;i<8;i++){nm=buildMeal(m);if(PLAN.ctx.nProt<2||nm.all[1].r.id!==old.all[1].r.id)break}
+  PLAN.days[d][m]=nm;renderPlan();toast("🔄 已重抽第 "+(d+1)+" 天"+(m===0?"午餐":"晚餐"));
+}
+function renderPlan(){
+  var c=PLAN.ctx,html="",market={},dayPro=0,n=0,pids={};
+  PLAN.days.forEach(function(meals,d){
+    html+='<div class="day-plan-card"><b style="color:var(--acc);">📅 第 '+(d+1)+" 天</b>";
+    meals.forEach(function(ml,m){
+      n++;dayPro+=ml.pro;pids[ml.all[1].r.id]=1;
+      ml.all.forEach(function(it){it.r.ingredients.forEach(function(i){
+        var key=i.n+"|"+i.u;if(!market[key])market[key]={n:i.n,u:i.u,q:0,g:gOf(i,it.r)};market[key].q+=i.q*it.s})});
+      var alt=ml.all[1].r.alt?'<small>💡 沒有舒肥棒？可改水煮／低溫烘烤，作法見食譜庫</small>':"";
+      html+='<div class="meal">'+(m===0?"☀️ 午餐":"🌙 晚餐")+' <button class="tab-btn noprint" style="font-size:12px;padding:1px 10px;" onclick="rerollMeal('+d+","+m+')">🔄 重抽這餐</button><br>'+
+        ml.all.map(function(it){return it.r.emoji+" "+it.r.name+(it.s!==1?"（份量 ×"+it.s+"）":"")}).join("<br>")+
+        "<small>約 "+Math.round(ml.kcal)+" kcal｜蛋白質 "+Math.round(ml.pro)+" g｜代換："+
+        Object.keys(ml.ex).map(function(k){return NAMES[k]+" "+r1(ml.ex[k])}).join("、")+"</small>"+alt+"</div>";
+    });
+    html+="</div>";
+  });
+  document.getElementById("result-title").textContent="🗓️ "+PLAN.days.length+" 天便當菜單（共 "+n+" 餐，盡量不重複）";
+  document.getElementById("plan-summary").innerHTML=
+    "基礎代謝 BMR 約 <b>"+Math.round(c.bmr)+"</b> kcal｜每日消耗 TDEE 約 <b>"+Math.round(c.tdee)+"</b> kcal<br>"+
+    (c.goal==="cut"?"減脂目標":"增肌目標")+"每日約 <b>"+Math.round(c.target)+"</b> kcal，每個便當抓約 <b>"+Math.round(c.perMeal)+"</b> kcal（占全日 35%，其餘留給早餐與點心）<br>"+
+    "每日蛋白質建議約 <b>"+Math.round(c.protGoal)+"</b> g；本菜單便當平均每天提供約 <b>"+Math.round(dayPro/PLAN.days.length)+"</b> g<br>"+
+    (Object.keys(pids).length<n?'<span style="color:var(--acc);">⚠️ 符合條件的蛋白質食譜只有 '+Object.keys(pids).length+' 道，部分餐點會重複；食譜庫變多就會更豐富。</span><br>':"")+'<span style="color:var(--sub);">每餐都包含主食、蛋白質、蔬菜，並搭配水果與乳品／堅果，依「食物代換表」份量估算。數值僅供參考，有特殊疾病或飲食需求請諮詢營養師。</span>';
+  document.getElementById("selected-recipes-list").innerHTML=html;
+  var ORDER=[["prot","🍖 蛋白質（肉／海鮮／豆蛋）"],["veg","🥬 蔬菜"],["carb","🍚 主食"],["fruit","🍎 水果"],["extra","🥛 乳品／堅果"],["sea","🧂 調味料與辛香料"]];
+  var mh="",tx="🛒 採買清單（共 "+Object.keys(market).length+" 樣）\n";
+  ORDER.forEach(function(o){
+    var ks=Object.keys(market).filter(function(k){return market[k].g===o[0]});if(!ks.length)return;
+    mh+='<div style="font-family:var(--fh);margin:12px 0 2px;color:var(--honey);">'+o[1]+"（"+ks.length+" 樣）</div>";tx+="\n"+o[1]+"\n";
+    ks.forEach(function(k){var i=market[k],q=fmtQ(i);
+      mh+='<div class="market-item"><span>• '+i.n+"</span><b>"+q+" "+i.u+"</b></div>";tx+="• "+i.n+" "+q+" "+i.u+"\n"});
+  });
+  PLAN.text=tx;document.getElementById("shopping-ingredients").innerHTML='<div style="font-size:13px;color:var(--sub);">本週共需採買 <b>'+Object.keys(market).length+"</b> 樣食材</div>"+mh;
+}
+function copyList(){
+  var t=PLAN&&PLAN.text;if(!t)return;
+  function fb(){var a=document.createElement("textarea");a.value=t;a.style.cssText="position:fixed;opacity:0";document.body.appendChild(a);a.select();
+    var ok=false;try{ok=document.execCommand("copy")}catch(e){}document.body.removeChild(a);toast(ok?"📋 已複製採買清單":"複製失敗，請手動選取清單文字")}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast("📋 已複製採買清單")},fb);else fb();
+}
+function printPlan(){window.print()}
+
+renderSeasonNow();renderCategories();renderRecipes();refresh();
+</script>
+</body>
+</html>
