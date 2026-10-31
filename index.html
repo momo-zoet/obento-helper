@@ -19,13 +19,15 @@ h1{font-family:var(--fh);font-size:26px;margin:0;color:var(--acc)}
 #menu-wrap{position:relative}
 #menu-btn{cursor:pointer;background:none;border:2px solid transparent;color:var(--ink);font-size:30px;line-height:1;padding:2px 10px;border-radius:10px}
 #menu-btn:hover,#menu-btn[aria-expanded="true"]{border-color:var(--ink)}
-#menu{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:230px;background:var(--card);border:2px solid var(--line);border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:6px 0;z-index:5}
+#menu{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:240px;background:var(--card);border:2px solid var(--line);border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:6px 0;z-index:5}
 .menu-item{display:block;width:100%;text-align:left;background:none;border:none;color:var(--ink);font:inherit;font-size:16px;padding:14px 22px;cursor:pointer;text-decoration:none}
 .menu-item:hover{background:var(--bg)}
 .menu-item.active{color:var(--acc);font-weight:700}
 .menu-sep{height:1px;background:var(--line);margin:4px 0}
 .tab-btn{cursor:pointer;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;font-size:13.5px;font-family:var(--fh)}
 .tab-btn.active{background:var(--acc);color:#fff;border-color:var(--acc)}
+.search-box{width:100%;padding:10px 16px;border:2px solid var(--line);border-radius:12px;font:inherit;background:var(--card);color:var(--ink);margin-bottom:12px;outline:none}
+.search-box:focus{border-color:var(--acc)}
 .categories{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:20px}
 .cat-chip{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--sub);border-radius:20px;padding:6px 14px;font-size:13.5px;white-space:nowrap}
 .cat-chip.active{background:var(--honey);color:#fff;border-color:var(--honey)}
@@ -54,10 +56,13 @@ h1{font-family:var(--fh);font-size:26px;margin:0;color:var(--acc)}
 .close-modal{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink)}
 .day-plan-card{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;font-size:14px}
 .meal{margin:6px 0 10px}.meal small{display:block;color:var(--sub);font-size:12px}
+.meal-item-link{color:var(--ink);cursor:pointer;text-decoration:underline;text-decoration-color:var(--sub);font-weight:500;}
+.meal-item-link:hover{color:var(--acc);text-decoration-color:var(--acc);}
 .tip{font-size:13px;background:var(--mk);border-left:4px solid var(--honey);padding:8px 10px;border-radius:8px;margin:8px 0}
 .sum{font-size:13.5px;background:var(--bg);border-radius:12px;padding:12px;margin-bottom:12px}
 .empty{text-align:center;color:var(--sub);padding:40px 10px}
 #toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:20px;font-size:13px;display:none;z-index:20}
+.section-header-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
 @media print{header,#page-recipes,#page-favs,#plan-form,.noprint,#toast{display:none!important}:root:root:root{--bg:#fff;--card:#fff;--ink:#000;--sub:#555;--line:#ccc;--mk:#fff}body{background:#fff;color:#000}}
 </style>
 </head>
@@ -71,6 +76,7 @@ h1{font-family:var(--fh);font-size:26px;margin:0;color:var(--acc)}
         <button class="menu-item active" id="tab-recipes" onclick="switchTab('recipes');closeMenu()">📖 食譜庫</button>
         <button class="menu-item" id="tab-plan" onclick="switchTab('plan');closeMenu()">🛒 備餐與採買</button>
         <button class="menu-item" id="tab-favs" onclick="switchTab('favs');closeMenu()">❤️ 我的食譜庫 (<span id="fav-count">0</span>)</button>
+        <button class="menu-item" onclick="openSavedPlanModal();closeMenu()">📌 已保存的備餐</button>
         <div class="menu-sep"></div>
         <a class="menu-item" id="menu-calc" href="https://momo-zoet.github.io/Sous-vide/">🥩 舒肥計算機</a>
       </nav>
@@ -79,12 +85,20 @@ h1{font-family:var(--fh);font-size:26px;margin:0;color:var(--acc)}
 
   <div id="page-recipes">
     <div id="season-now" class="tip" style="margin-bottom:14px;"></div>
+    <input type="text" id="recipe-search" class="search-box" placeholder="🔍 搜尋食譜名稱或食材（例如：雞肉、高麗菜、舒肥...）" oninput="renderRecipes()">
     <div class="categories" id="cat-list"></div>
     <div class="grid" id="recipe-grid"></div>
   </div>
 
   <div id="page-favs" style="display:none;">
-    <h2 style="font-family:var(--fh);margin-top:0;">❤️ 我的食譜庫</h2>
+    <div class="section-header-actions">
+      <h2 style="font-family:var(--fh);margin:0;">❤️ 我的食譜庫</h2>
+      <div>
+        <button class="tab-btn" onclick="exportFavs()">📤 匯出收藏</button>
+        <button class="tab-btn" onclick="document.getElementById('import-file').click()">📥 匯入收藏</button>
+        <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importFavs(event)">
+      </div>
+    </div>
     <div class="grid" id="fav-grid"></div>
   </div>
 
@@ -136,6 +150,9 @@ h1{font-family:var(--fh);font-size:26px;margin:0;color:var(--acc)}
     <div class="plan-section" id="plan-result-box" style="display:none;">
       <h3 style="font-family:var(--fh);margin-top:0;" id="result-title"></h3>
       <div class="sum" id="plan-summary"></div>
+      <div style="margin-bottom: 16px;">
+        <button class="tab-btn" style="background:var(--acc);color:#fff;border-color:var(--acc);" onclick="saveCurrentPlan()">💾 保存本期備餐建議</button>
+      </div>
       <div id="selected-recipes-list"></div>
       <div class="market-list">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;"><h3 style="font-family:var(--fh);margin:0;color:var(--honey);">🛒 菜市場合併總採買清單</h3><span class="noprint"><button class="tab-btn" onclick="copyList()">📋 複製清單</button> <button class="tab-btn" onclick="printPlan()">🖨️ 列印菜單與清單</button></span></div>
@@ -148,6 +165,16 @@ h1{font-family:var(--fh);font-size:26px;margin:0;color:var(--acc)}
 <div class="modal" id="recipe-modal" onclick="if(event.target===this)closeModal()">
   <div class="modal-content"><button class="close-modal" onclick="closeModal()">✕</button><div id="modal-body"></div></div>
 </div>
+
+<!-- 已保存備餐的 Modal -->
+<div class="modal" id="saved-plan-modal" onclick="if(event.target===this)closeSavedPlanModal()">
+  <div class="modal-content" style="max-width: 650px;">
+    <button class="close-modal" onclick="closeSavedPlanModal()">✕</button>
+    <h2 style="font-family:var(--fh);margin-top:0;color:var(--acc);">📌 已保存的備餐建議</h2>
+    <div id="saved-plan-content"></div>
+  </div>
+</div>
+
 <div style="text-align:center;font-size:12px;color:var(--sub);padding:0 16px 40px;">⚠️ 熱量與份量為估算值；食材請依個人過敏與飲食需求自行判斷。<br>🌱 當季資料整理自農糧署《臺灣主要水果產期分布》與農委會（現農業部）蔬菜產期資料；葡萄柚、草莓、西瓜、山藥及其他標示「公開資料整理」的品項僅供參考。</div>
 <div id="toast"></div>
 
@@ -183,6 +210,48 @@ function switchTab(t){
   });
   refresh();
 }
+
+function exportFavs(){
+  if(!favorites.length){toast("目前沒有收藏任何食譜哦！");return}
+  var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(favorites));
+  var dlAnchor = document.createElement('a');
+  dlAnchor.setAttribute("href", dataStr);
+  dlAnchor.setAttribute("download", "bento_favorites_backup.json");
+  document.body.appendChild(dlAnchor);
+  dlAnchor.click();
+  dlAnchor.remove();
+  toast("📦 收藏資料已下載備份");
+}
+
+function importFavs(event){
+  var file = event.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var imported = JSON.parse(e.target.result);
+      if(Array.isArray(imported)){
+        var count = 0;
+        imported.forEach(function(id){
+          if(typeof id === 'number' && favorites.indexOf(id) === -1){
+            favorites.push(id);
+            count++;
+          }
+        });
+        saveFavs();
+        refresh();
+        toast("✅ 成功匯入 " + count + " 道新收藏食譜！");
+      }else{
+        toast("⚠️ 檔案格式不正確");
+      }
+    }catch(err){
+      toast("⚠️ 匯入失敗，JSON 格式無效");
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
 function renderCategories(){
   document.getElementById("cat-list").innerHTML=CATEGORIES.map(function(c){
     return '<button class="cat-chip '+(c===currentCat?"active":"")+'" onclick="filterCat(\''+c+'\')">'+c+'</button>'}).join("");
@@ -196,9 +265,46 @@ function cardHtml(r){
   '<span class="badge">約 '+Math.round(kc(r))+' kcal</span></div>'+
   '<div style="font-size:13px;color:var(--sub);">點擊查看完整食譜與作法 ➔</div></div>';
 }
+
+/* --- 智慧關鍵字搜尋（支援同義詞，如搜尋「雞肉」可連動「雞胸」、「雞腿」） --- */
+var SYNONYMS = {
+  "雞": ["雞肉", "雞胸", "雞腿", "雞翅"],
+  "雞肉": ["雞胸", "雞腿", "雞翅"],
+  "豬": ["豬肉", "豬排", "豬里肌", "培根"],
+  "豬肉": ["豬排", "豬里肌", "培根"],
+  "牛": ["牛肉", "牛排", "牛腩"],
+  "牛肉": ["牛排", "牛腩"],
+  "海鮮": ["蝦", "魚", "鮭魚", "干貝", "花枝", "透抽"],
+  "菜": ["蔬菜", "高麗菜", "花椰菜", "地瓜葉", "菠菜", "青菜"]
+};
+
 function renderRecipes(){
-  document.getElementById("recipe-grid").innerHTML=RECIPES.filter(function(r){return currentCat==="全部"||r.cat===currentCat}).map(cardHtml).join("");
+  var rawKw = document.getElementById("recipe-search").value.trim().toLowerCase();
+  
+  // 展開同義詞
+  var searchTerms = [rawKw];
+  if(rawKw && SYNONYMS[rawKw]){
+    searchTerms = searchTerms.concat(SYNONYMS[rawKw]);
+  }
+
+  var list = RECIPES.filter(function(r){
+    var catMatch = (currentCat === "全部" || r.cat === currentCat);
+    if(!catMatch) return false;
+    if(!rawKw) return true;
+
+    // 檢查是否符合任一關鍵字或其同義詞
+    return searchTerms.some(function(kw){
+      var nameMatch = r.name.toLowerCase().indexOf(kw) > -1;
+      var ingMatch = r.ingredients.some(function(i){ return i.n.toLowerCase().indexOf(kw) > -1; });
+      var catTextMatch = r.cat.toLowerCase().indexOf(kw) > -1;
+      return nameMatch || ingMatch || catTextMatch;
+    });
+  });
+  
+  var grid = document.getElementById("recipe-grid");
+  grid.innerHTML = list.length ? list.map(cardHtml).join("") : '<div class="empty" style="grid-column:1/-1;">找不到符合關鍵字的食譜 🥺</div>';
 }
+
 function renderFavs(){
   var l=RECIPES.filter(function(r){return favorites.indexOf(r.id)>-1});
   document.getElementById("fav-grid").innerHTML=l.length?l.map(cardHtml).join(""):
@@ -248,7 +354,7 @@ var ROLE={"全穀雜糧類":"carb","豆魚蛋肉類":"prot","蔬菜類":"veg","�
 function mainOf(r){return r.main||r.ingredients[0].n}
 function gOf(i,r){return i.g==="v"?"veg":SEAS.indexOf(i.n)>-1?"sea":(ROLE[r.cat]||"extra")}
 function fmtQ(i){var q=i.q;return (i.u==="g"||i.u==="ml")?(q>=10?Math.ceil(q/5)*5:Math.ceil(q)):(i.u==="顆"&&q<1?r1(q):Math.ceil(q))}
-// 依「主食材」分組，只挑 k 種食材（食譜多的食材被選中機率較高，收藏的食譜加權）
+
 function chooseMains(pool,k,favFirst){
   var g={};pool.forEach(function(r){var m=mainOf(r);(g[m]=g[m]||[]).push(r)});
   var keys=Object.keys(g),out=[];
@@ -261,7 +367,7 @@ function chooseMains(pool,k,favFirst){
   }
   return pool.filter(function(r){return out.indexOf(mainOf(r))>-1});
 }
-// 主食：依勾選的飯／麵／薯類篩選，並控制白米白麵比例
+
 function makeCarb(lean,favFirst){
   var kinds=[];document.querySelectorAll('input[name="carb"]:checked').forEach(function(e){kinds.push(e.value)});
   var mode=document.getElementById("white-mode").value;
@@ -273,7 +379,6 @@ function makeCarb(lean,favFirst){
   return function(){i++;if(!wp.length)return pb();if(!bp.length||mode==="whole")return pw();return i%3===0?pb():pw()};
 }
 
-// 產季顯示（資料在 recipes.js 的 SEASON）
 var NOW=new Date().getMonth()+1,SEAS_FIRST=false;
 function parseM(s){if(s==="all")return null;var o=[];s.split(",").forEach(function(p){var a=p.split("-").map(Number),b=a.length>1?a[1]:a[0],i=a[0];for(var n=0;n<13;n++){o.push(i);if(i===b)break;i=i%12+1}});return o}
 function fmtM(s){return s==="all"?"全年供應":s.replace(/-/g,"–").replace(/,/g,"、")+" 月"}
@@ -295,6 +400,7 @@ function buildMeal(m){
   all.forEach(function(it){kcal+=kc(it.r,it.s);pro+=pr(it.r,it.s);for(var k in it.r.x)ex[k]=(ex[k]||0)+it.r.x[k]*it.s});
   return {slot:m,all:all,kcal:kcal,pro:pro,ex:ex};
 }
+
 function generatePlan(){
   var days=Math.round(num("days",5,1,7)),both=document.getElementById("meal-type").value==="both";
   var goal=document.getElementById("goal").value,male=document.getElementById("gender").value==="male";
@@ -318,11 +424,93 @@ function generatePlan(){
   renderPlan();
   document.getElementById("plan-result-box").style.display="block";
 }
+
 function rerollMeal(d,m){
   var old=PLAN.days[d][m],nm=old;
   for(var i=0;i<8;i++){nm=buildMeal(m);if(PLAN.ctx.nProt<2||nm.all[1].r.id!==old.all[1].r.id)break}
   PLAN.days[d][m]=nm;renderPlan();toast("🔄 已重抽第 "+(d+1)+" 天"+(m===0?"午餐":"晚餐"));
 }
+
+function rerollSingleItem(d, m, itemIdx){
+  var c = PLAN.ctx;
+  var pickerFunc;
+  if(itemIdx === 0) pickerFunc = c.pc;
+  else if(itemIdx === 1) pickerFunc = c.pp;
+  else if(itemIdx === 2) pickerFunc = c.pv;
+  else if(itemIdx === 3) pickerFunc = (m === 0 ? c.pf : c.pe);
+
+  if(pickerFunc){
+    var newRecipe = pickerFunc();
+    var currentMeal = PLAN.days[d][m];
+    currentMeal.all[itemIdx].r = newRecipe;
+    
+    var carb = currentMeal.all[0].r;
+    var other = currentMeal.all.slice(1).reduce(function(a, it){ return a + kc(it.r); }, 0);
+    var ck = kc(carb);
+    var s = Math.min(2, Math.max(0.5, Math.round((c.perMeal - other) / ck * 4) / 4));
+    currentMeal.all[0].s = s;
+    
+    var kcal = 0, pro = 0, ex = {};
+    currentMeal.all.forEach(function(it){
+      kcal += kc(it.r, it.s);
+      pro += pr(it.r, it.s);
+      for(var k in it.r.x) ex[k] = (ex[k] || 0) + it.r.x[k] * it.s;
+    });
+    currentMeal.kcal = kcal;
+    currentMeal.pro = pro;
+    currentMeal.ex = ex;
+    
+    renderPlan();
+    toast("🔄 已更換菜色：" + newRecipe.name);
+  }
+}
+
+function saveCurrentPlan(){
+  if(!PLAN) return;
+  try{
+    localStorage.setItem("bento_saved_plan", JSON.stringify(PLAN));
+    toast("💾 成功保存本期備餐建議！");
+  }catch(e){
+    toast("⚠️ 保存失敗");
+  }
+}
+
+function openSavedPlanModal(){
+  var savedStr = localStorage.getItem("bento_saved_plan");
+  var container = document.getElementById("saved-plan-content");
+  if(!savedStr){
+    container.innerHTML = '<div class="empty">目前沒有保存的備餐建議<br>請先至「備餐與採買」生成並點擊「保存本期備餐建議」！</div>';
+  }else{
+    try{
+      var p = JSON.parse(savedStr);
+      var html = '<div style="font-size:14px;margin-bottom:12px;color:var(--sub);">以下是您先前儲存的備餐內容：</div>';
+      var market = {};
+      
+      p.days.forEach(function(meals, d){
+        html += '<div class="day-plan-card"><b style="color:var(--acc);">📅 第 '+(d+1)+" 天</b>";
+        meals.forEach(function(ml, m){
+          ml.all.forEach(function(it){it.r.ingredients.forEach(function(i){
+            var key=i.n+"|"+i.u;if(!market[key])market[key]={n:i.n,u:i.u,q:0,g:gOf(i,it.r)};market[key].q+=i.q*it.s})});
+          
+          html += '<div class="meal">'+(m===0?"☀️ 午餐":"🌙 晚餐")+'<br>'+
+            ml.all.map(function(it){return '<span class="meal-item-link" onclick="openRecipeModal('+it.r.id+')">'+it.r.emoji+" "+it.r.name+'</span>'+(it.s!==1?"（份量 ×"+it.s+"）":"")}).join("<br>")+
+            "<small>約 "+Math.round(ml.kcal)+" kcal｜蛋白質 "+Math.round(ml.pro)+" g</small></div>";
+        });
+        html += "</div>";
+      });
+      
+      container.innerHTML = html + '<div style="margin-top:16px;text-align:right;"><button class="tab-btn" onclick="localStorage.removeItem(\'bento_saved_plan\');openSavedPlanModal();toast(\'🗑️ 已清除保存的備餐\')">🗑️ 清除保存紀錄</button></div>';
+    }catch(e){
+      container.innerHTML = '<div class="empty">讀取保存資料時發生錯誤</div>';
+    }
+  }
+  document.getElementById("saved-plan-modal").style.display="flex";
+}
+
+function closeSavedPlanModal(){
+  document.getElementById("saved-plan-modal").style.display="none";
+}
+
 function renderPlan(){
   var c=PLAN.ctx,html="",market={},dayPro=0,n=0,pids={};
   PLAN.days.forEach(function(meals,d){
@@ -332,8 +520,16 @@ function renderPlan(){
       ml.all.forEach(function(it){it.r.ingredients.forEach(function(i){
         var key=i.n+"|"+i.u;if(!market[key])market[key]={n:i.n,u:i.u,q:0,g:gOf(i,it.r)};market[key].q+=i.q*it.s})});
       var alt=ml.all[1].r.alt?'<small>💡 沒有舒肥棒？可改水煮／低溫烘烤，作法見食譜庫</small>':"";
-      html+='<div class="meal">'+(m===0?"☀️ 午餐":"🌙 晚餐")+' <button class="tab-btn noprint" style="font-size:12px;padding:1px 10px;" onclick="rerollMeal('+d+","+m+')">🔄 重抽這餐</button><br>'+
-        ml.all.map(function(it){return it.r.emoji+" "+it.r.name+(it.s!==1?"（份量 ×"+it.s+"）":"")}).join("<br>")+
+      
+      var itemsHtml = ml.all.map(function(it, idx){
+        return '<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0;">'+
+          '<span><span class="meal-item-link" onclick="openRecipeModal('+it.r.id+')">'+it.r.emoji+" "+it.r.name+'</span>'+(it.s!==1?"（份量 ×"+it.s+"）":"")+'</span>'+
+          '<button class="tab-btn noprint" style="font-size:10px;padding:0px 6px;margin-left:6px;" title="換一道菜" onclick="rerollSingleItem('+d+','+m+','+idx+')">🎲 換這道</button>'+
+          '</div>';
+      }).join("");
+
+      html+='<div class="meal">'+(m===0?"☀️ 午餐":"🌙 晚餐")+' <button class="tab-btn noprint" style="font-size:12px;padding:1px 10px;" onclick="rerollMeal('+d+","+m+')">🔄 重抽整餐</button><br>'+
+        itemsHtml+
         "<small>約 "+Math.round(ml.kcal)+" kcal｜蛋白質 "+Math.round(ml.pro)+" g｜代換："+
         Object.keys(ml.ex).map(function(k){return NAMES[k]+" "+r1(ml.ex[k])}).join("、")+"</small>"+alt+"</div>";
     });
@@ -356,6 +552,7 @@ function renderPlan(){
   });
   PLAN.text=tx;document.getElementById("shopping-ingredients").innerHTML='<div style="font-size:13px;color:var(--sub);">本週共需採買 <b>'+Object.keys(market).length+"</b> 樣食材</div>"+mh;
 }
+
 function copyList(){
   var t=PLAN&&PLAN.text;if(!t)return;
   function fb(){var a=document.createElement("textarea");a.value=t;a.style.cssText="position:fixed;opacity:0";document.body.appendChild(a);a.select();
