@@ -78,6 +78,9 @@ h1{font-family:var(--fh);font-size:26px;margin:0;color:var(--acc)}
 details.pantry{margin-top:14px;border-top:1.5px dashed var(--honey);padding-top:8px}
 details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);padding:4px 0}
 .tip.warn{border-left-color:var(--acc)}
+.market-item{gap:10px;align-items:flex-start}
+.market-item small{display:block;font-size:12px;color:var(--sub);font-weight:400}
+.market-item small.left{color:var(--acc)}
 @media print{#disclaimer-modal,header,#page-recipes,#page-favs,#plan-form,.noprint,#toast{display:none!important}:root:root:root{--bg:#fff;--card:#fff;--ink:#000;--sub:#555;--line:#ccc;--mk:#fff}body{background:#fff;color:#000}}
 </style>
 </head>
@@ -128,6 +131,9 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
         <div class="form-group"><label>要準備的餐次（可複選）</label>
           <div class="checkbox-group"><span class="mealpair"><label><input type="checkbox" name="mealsel" value="bf" checked> 🌅 早餐</label><label class="cvs-chip" title="這餐改吃超商"><input type="checkbox" name="cvs" value="bf" onchange="this.parentNode.classList.toggle('on',this.checked)">🏪 超商</label></span><span class="mealpair"><label><input type="checkbox" name="mealsel" value="lunch" checked> ☀️ 午餐</label><label class="cvs-chip" title="這餐改吃超商"><input type="checkbox" name="cvs" value="lunch" onchange="this.parentNode.classList.toggle('on',this.checked)">🏪 超商</label></span><span class="mealpair"><label><input type="checkbox" name="mealsel" value="dinner" checked> 🌙 晚餐</label><label class="cvs-chip" title="這餐改吃超商"><input type="checkbox" name="cvs" value="dinner" onchange="this.parentNode.classList.toggle('on',this.checked)">🏪 超商</label></span></div>
           <div style="font-size:12px;color:var(--sub);margin-top:6px;">🏪 點亮「超商」的餐次會改從超商組合抽，不列入採買；產生菜單後也能逐餐切換。</div></div>
+        <div class="form-group"><label>早餐口味</label>
+          <select id="bf-taste"><option value="mix" selected>鹹口味為主，偶爾甜口味（建議）</option><option value="salty">只吃鹹口味</option><option value="any">不限（含奶昔、甜燕麥）</option></select>
+          <div style="font-size:12px;color:var(--sub);margin-top:6px;">鹹口味（蛋、豆腐、肉類搭配全穀）通常比較不甜，升糖也較平緩。</div></div>
         <div class="form-group"><label>健身目標</label>
           <select id="goal"><option value="cut">🔥 減脂期（熱量赤字）</option><option value="bulk">💪 增肌期（熱量盈餘）</option></select></div>
         <div class="form-group"><label>生理性別 / 年齡（限 18 歲以上）</label>
@@ -224,6 +230,7 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
         <li><b>早餐蛋白質目標：</b>體重 × 0.4 g（至少 25 g）。</li>
         <li><b>升糖負荷與蔬菜加量：</b>各主食的 GI 為概略值；主食升糖負荷偏高時會自動加量綠色蔬菜。這是排餐的小設計，不是醫療建議，也不能用來控制血糖。</li>
         <li><b>超商組合：</b>為常見品項的概估，請以包裝營養標示為準。</li>
+        <li><b>包裝量與保存期限：</b>採買清單的包裝量、蔬果保存天數都是依台灣常見規格估的，實際請依通路與品質判斷。</li>
       </ul>
       <h4 style="font-family:var(--fh);margin:14px 0 4px;color:var(--honey);">🚫 不適用的人</h4>
       <p style="margin:0;">未滿 18 歲、懷孕或哺乳中、已知有慢性病或飲食失調、BMI 超過 <span id="about-bmi">27</span>、服用藥物者，請先諮詢專業醫師與營養師。</p>
@@ -408,16 +415,22 @@ function updateModalFav(){
 function closeModal(){openId=null;document.getElementById("recipe-modal").style.display="none"}
 
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+// picker：輪流抽出 pool 裡的食譜；可傳入 ok(r) 篩選函式（例如「這一天還沒過期」）
 function picker(pool,favFirst){
   var q=[],last=null;
-  return function(){
-    if(!q.length){
-      q=shuffle(pool);
-      var sc=function(r){return (favFirst&&favorites.indexOf(r.id)>-1?0:2)+(SEAS_FIRST&&seasonInfo(r).now?0:1)};
-      if(favFirst||SEAS_FIRST)q.sort(function(a,b){return sc(a)-sc(b)});
-      else if(q.length>1&&q[0]===last)q.push(q.shift());
-    }
-    last=q.shift();return last;
+  function refill(){
+    q=shuffle(pool);
+    var sc=function(r){return (favFirst&&favorites.indexOf(r.id)>-1?0:2)+(SEAS_FIRST&&seasonInfo(r).now?0:1)};
+    if(favFirst||SEAS_FIRST)q.sort(function(a,b){return sc(a)-sc(b)});
+    else if(q.length>1&&q[0]===last)q.push(q.shift());
+  }
+  function find(ok){for(var j=0;j<q.length;j++)if(!ok||ok(q[j]))return j;return -1}
+  return function(ok){
+    if(!q.length)refill();
+    var i=find(ok);
+    if(i<0){refill();i=find(ok)}
+    if(i<0)i=0;
+    last=q.splice(i,1)[0];return last;
   };
 }
 function num(id,d,lo,hi){var v=parseFloat(document.getElementById(id).value);return isNaN(v)?d:Math.min(hi,Math.max(lo,v))}
@@ -463,6 +476,89 @@ function renderSeasonNow(){var f=[],v=[];
   Object.keys(SEASON).forEach(function(k){var m=parseM(SEASON[k][0]);if(m&&m.indexOf(NOW)>-1)(SEASON[k][3]==="f"?f:v).push(k)});
   document.getElementById("season-now").innerHTML="🌱 <b>"+NOW+" 月當季</b>（只列有明確產季的品項）<br>🍎 水果："+(f.join("、")||"—")+"<br>🥬 蔬菜："+(v.join("、")||"—")}
 
+/* ===== 保存期限、早餐口味、包裝量 ===== */
+function shelfOf(r){var m=99;r.ingredients.forEach(function(i){var s=SHELF[i.n];if(s&&s<m)m=s});return m}
+function dayOk(d){return function(r){return d<shelfOf(r)}}
+function isSavory(r){return SAVORY.indexOf(r.id)>-1}
+// 早餐：鹹口味為主，每 4 餐插入 1 餐甜口味
+function makeBf(list,taste,lean,favFirst){
+  var sv=chooseMains(list.filter(isSavory),lean?3:0,favFirst),sw=chooseMains(list.filter(function(r){return !isSavory(r)}),lean?2:0,favFirst);
+  var ps=picker(sv,favFirst),pw=picker(sw,favFirst),pa=picker(chooseMains(list,lean?3:0,favFirst),favFirst),i=0;
+  return function(ok){
+    if(taste==="any")return pa(ok);
+    if(!sv.length)return pw(ok);
+    if(taste==="salty"||!sw.length)return ps(ok);
+    i++;return i%4===0?pw(ok):ps(ok);
+  };
+}
+
+var FIT_LO=0.75,FIT_HI=1.6;
+// 重算份量：先還原，再把午晚餐的蔬菜／水果份量微調成整包
+function refit(){
+  var all=[];PLAN.days.forEach(function(meals){meals.forEach(function(ml){all.push(ml)})});
+  all.forEach(function(ml){
+    if(ml.cvs||ml.slot==="bf")return;
+    ml.all[2].vs=null;
+    if(ml.all[3]&&ml.all[3].r.cat==="水果類")ml.all[3].s=1;
+    calcMeal(ml);
+  });
+  fitPacks();
+  all.forEach(function(ml){if(!ml.cvs&&ml.slot!=="bf")calcMeal(ml)});
+}
+function fitPacks(){
+  var use={};
+  PLAN.days.forEach(function(meals){meals.forEach(function(ml){
+    if(ml.cvs)return;
+    ml.all.forEach(function(it,idx){
+      var scal=ml.slot!=="bf"&&idx>=2&&(it.r.cat==="蔬菜類"||it.r.cat==="水果類");
+      it.r.ingredients.forEach(function(i,n){
+        var k=i.n+"|"+i.u,o=use[k]||(use[k]={n:i.n,fixed:0,sc:0,items:[]});
+        if(scal&&n===0){o.sc+=i.q*it.s;o.items.push({it:it,q:i.q})}else o.fixed+=i.q*it.s;
+      });
+    });
+  })});
+  Object.keys(use).forEach(function(k){
+    var o=use[k],pk=PACK[o.n];
+    if(!pk||pk[2]==="d"||!o.items.length)return;
+    var size=pk[0],T=o.fixed+o.sc,best=null;
+    [Math.floor(T/size),Math.ceil(T/size)].forEach(function(P){
+      if(P<1)return;
+      var G=P*size,f=(G-o.fixed)/o.sc;
+      if(f<FIT_LO||f>FIT_HI)return;
+      if(!best||Math.abs(Math.log(f))<Math.abs(Math.log(best.f)))best={f:f,G:G};
+    });
+    if(!best)return;
+    var tot=o.fixed;
+    o.items.forEach(function(e){e.ns=clampQ(e.it.s*best.f,0.75,2);tot+=e.q*e.ns});
+    for(var n=0;n<40;n++){
+      var cur=Math.abs(best.G-tot),mv=null;
+      o.items.forEach(function(e){[0.25,-0.25].forEach(function(st){
+        var ns=e.ns+st;if(ns<0.75||ns>2)return;
+        var err=Math.abs(best.G-(tot+e.q*st));
+        if(err<cur-1e-6&&(!mv||err<mv.err))mv={e:e,st:st,err:err};
+      })});
+      if(!mv)break;
+      mv.e.ns+=mv.st;tot+=mv.e.q*mv.st;
+    }
+    o.items.forEach(function(e){e.it.vs=e.ns;e.it.s=e.ns});
+  });
+}
+// 採買清單的一行：買幾包／每包多少／需要多少／剩多少
+function shopLine(i){
+  var pk=PACK[i.n];
+  if(!pk){var q=fmtQ(i);return {h:'<div class="market-item"><span>• '+i.n+'</span><b>'+q+' '+i.u+'</b></div>',t:"• "+i.n+" "+q+" "+i.u+"\n"}}
+  var size=pk[0],lab=pk[1],fl=pk[2],cnt=(i.u==="顆"||i.u==="片"||i.u==="張");
+  var n=Math.max(1,Math.ceil(i.q/size-0.03)),left=Math.max(0,n*size-i.q);
+  var fmt=function(v){return cnt?r1(v):Math.round(v)};
+  var sub="每"+lab+(cnt?" ":"約 ")+size+" "+i.u+"｜需要 "+fmt(i.q)+" "+i.u,bad=false;
+  if(fl!=="d"){
+    sub+="｜剩 "+fmt(left)+" "+i.u;
+    if(left>=size*0.4){if(fl==="f")sub+="（可分袋冷凍）";else{sub+=" ⚠️ 剩得偏多";bad=true}}
+  }
+  return {h:'<div class="market-item"><span>• '+i.n+'<small'+(bad?' class="left"':'')+'>'+sub+'</small></span><b>買 '+n+' '+lab+'</b></div>',
+          t:"• "+i.n+" 買 "+n+" "+lab+"（"+sub+"）\n"};
+}
+
 var PLAN=null;
 var SLOT_NAME={bf:"早餐",lunch:"午餐",dinner:"晚餐"},SLOT_LABEL={bf:"🌅 早餐",lunch:"☀️ 午餐",dinner:"🌙 晚餐"};
 var BMI_WARN=27;           // 啟動視窗與菜單提醒用的 BMI 門檻（國健署：≥24 過重、≥27 肥胖）
@@ -472,11 +568,24 @@ function glLevel(r){var g=glOf(r);return g>=GL_HIGH?"high":g>=GL_MID?"mid":"low"
 function vegMul(lv){return lv==="high"?1.5:lv==="mid"?1.25:1}
 function isGreen(r){return GREEN.indexOf(mainOf(r))>-1}
 function clampQ(x,lo,hi){return Math.min(hi,Math.max(lo,Math.round(x*4)/4))}
-function pickVeg(lv){return (lv!=="low"?PLAN.ctx.pvg:PLAN.ctx.pv)()}
 function totals(ml){
   var kcal=0,pro=0,ex={};
   ml.all.forEach(function(it){kcal+=kc(it.r,it.s);pro+=pr(it.r,it.s);for(var k in it.r.x)ex[k]=(ex[k]||0)+it.r.x[k]*it.s});
   ml.kcal=kcal;ml.pro=pro;ml.ex=ex;return ml;
+}
+function vegCount(){
+  var c={};
+  PLAN.days.forEach(function(meals){meals.forEach(function(ml){
+    if(ml.cvs||ml.slot==="bf"||ml.all.length<3)return;
+    var m=mainOf(ml.all[2].r);c[m]=(c[m]||0)+1})});
+  return c;
+}
+// 只挑「還沒過期」且「本週用得最少」的蔬菜，避免一直吃同一種
+function pickVeg(lv,d){
+  var c=PLAN.ctx,green=lv!=="low",pool=green?c.greenPool:c.vegPool,f=green?c.pvg:c.pv;
+  var cnt=vegCount(),lo=1e9;
+  pool.forEach(function(r){if(d<shelfOf(r)){var n=cnt[mainOf(r)]||0;if(n<lo)lo=n}});
+  return f(function(r){return d<shelfOf(r)&&(cnt[mainOf(r)]||0)<=lo});
 }
 // 重新計算份量：早餐＝依熱量縮放並確保蛋白質量；午晚餐＝先依 GL 加量蔬菜，再用主食份量補足熱量
 function calcMeal(ml){
@@ -487,19 +596,19 @@ function calcMeal(ml){
     if(p1*s<c.bfPro)s=Math.min(1.5,Math.ceil(c.bfPro/p1*4)/4);
     ml.all[0].s=s;ml.gl="low";return totals(ml);
   }
-  var carb=ml.all[0].r,other=0;
-  ml.gl=glLevel(carb);ml.all[2].s=vegMul(ml.gl);
+  var carb=ml.all[0].r,other=0,v=ml.all[2];
+  ml.gl=glLevel(carb);v.s=(v.vs!=null)?v.vs:vegMul(ml.gl);
   for(var i=1;i<ml.all.length;i++)other+=kc(ml.all[i].r,ml.all[i].s);
   ml.all[0].s=clampQ((c.perMeal-other)/kc(carb),0.5,2);
   return totals(ml);
 }
 function buildMeal(slot,d,forceCvs){
-  var c=PLAN.ctx,ml,cv=forceCvs===undefined?c.cvsSlots.indexOf(slot)>-1:forceCvs;
+  var c=PLAN.ctx,ml,cv=forceCvs===undefined?c.cvsSlots.indexOf(slot)>-1:forceCvs,ok=dayOk(d);
   if(cv)ml={slot:slot,cvs:true,all:[{r:(slot==="bf"?c.pcb():c.pcl()),s:1}]};
-  else if(slot==="bf")ml={slot:"bf",all:[{r:c.pb(),s:1}]};
+  else if(slot==="bf")ml={slot:"bf",all:[{r:c.pb(ok),s:1}]};
   else{
     var carb=c.pc(),side=c.bothLD?(slot==="lunch"?"fruit":"extra"):(d%2===0?"fruit":"extra");
-    ml={slot:slot,side:side,all:[{r:carb,s:1},{r:c.pp(),s:1},{r:pickVeg(glLevel(carb)),s:1},{r:(side==="fruit"?c.pf():c.pe()),s:1}]};
+    ml={slot:slot,side:side,all:[{r:carb,s:1},{r:c.pp(ok),s:1},{r:pickVeg(glLevel(carb),d),s:1},{r:(side==="fruit"?c.pf(ok):c.pe()),s:1}]};
   }
   return calcMeal(ml);
 }
@@ -522,28 +631,48 @@ function generatePlan(){
   function pool(f){return RECIPES.filter(function(r){return !r.bf&&!r.cvs&&f(r)})}
   var protP=chooseMains(pool(function(r){return r.cat==="豆魚蛋肉類"&&ok(r)}),kp,favFirst);
   if(!prefs.length){toast("請至少勾選一種蛋白質偏好");return}
-  var bfP=RECIPES.filter(function(r){return r.bf&&!r.cvs&&ok(r)});
-  if(hasBf&&!bfP.length){toast("沒有符合飲食偏好的早餐食譜，請調整蛋白質偏好");return}
+  var taste=document.getElementById("bf-taste").value;
+
+  // 蔬菜：依保存期限排；超過 3 天的菜單一定要有耐放蔬菜
   var vegAll=pool(function(r){return r.cat==="蔬菜類"}),vegC=chooseMains(vegAll,kv,favFirst);
+  function longLived(r){return shelfOf(r)>=days}
+  function addMain(list,cands){
+    var cs=cands.filter(function(r){return list.indexOf(r)<0});if(!cs.length)return list;
+    var m=mainOf(shuffle(cs)[0]);
+    return list.concat(vegAll.filter(function(r){return mainOf(r)===m&&list.indexOf(r)<0}));
+  }
+  if(days>3&&!vegC.some(longLived))vegC=addMain(vegC,vegAll.filter(longLived));
   var greenC=vegC.filter(isGreen),gm={};greenC.forEach(function(r){gm[mainOf(r)]=1});
   // 綠色蔬菜至少要有 2 種，避免高 GL 主食每餐都配同一種菜
   if(Object.keys(gm).length<2)shuffle(vegAll.filter(function(r){return isGreen(r)&&!gm[mainOf(r)]})).forEach(function(r){if(Object.keys(gm).length<2){gm[mainOf(r)]=1;greenC.push(r)}});
+  if(days>3&&!greenC.some(longLived))greenC=addMain(greenC,vegAll.filter(function(r){return isGreen(r)&&longLived(r)}));
+  var gp=greenC.length?greenC:vegC;
+
+  // 早餐：易壞的蔬菜（保存 ≤4 天）只在本週蔬菜名單有買的時候才排，避免只用一點點
+  var bfAll=RECIPES.filter(function(r){return r.bf&&!r.cvs&&ok(r)}),vn={};
+  vegC.forEach(function(r){vn[mainOf(r)]=1});
+  var bfP=bfAll.filter(function(r){return !kv||r.ingredients.every(function(i){return i.g!=="v"||(SHELF[i.n]||99)>4||vn[i.n]})});
+  if(!bfP.length)bfP=bfAll;
+  if(hasBf&&!bfP.length){toast("沒有符合飲食偏好的早餐食譜，請調整蛋白質偏好");return}
+
   var bmr=10*w+6.25*h-5*age+(male?5:-161),tdee=bmr*act,bmi=w/((h/100)*(h/100));
   var target=Math.max(bmr,tdee*(goal==="cut"?0.85:1.1));
   PLAN={days:[],ctx:{
     pc:makeCarb(lean,favFirst),pp:picker(protP,favFirst),
-    pv:picker(vegC,favFirst),pvg:picker(greenC.length?greenC:vegC,favFirst),
+    pv:picker(vegC,favFirst),pvg:picker(gp,favFirst),vegPool:vegC,greenPool:gp,
     pf:picker(chooseMains(pool(function(r){return r.cat==="水果類"}),lean?2:0,favFirst),favFirst),
     pe:picker(pool(function(r){return (r.cat==="乳製品類"&&ok(r))||r.cat==="油脂與堅果"}),favFirst),
-    pb:picker(chooseMains(bfP,lean?3:0,favFirst),favFirst),
+    pb:makeBf(bfP,taste,lean,favFirst),
     pcb:picker(RECIPES.filter(function(r){return r.cvs&&r.bf&&ok(r)}),false),pcl:picker(RECIPES.filter(function(r){return r.cvs&&!r.bf&&ok(r)}),false),
     cvsSlots:cvsSlots,nCb:RECIPES.filter(function(r){return r.cvs&&r.bf&&ok(r)}).length,nCl:RECIPES.filter(function(r){return r.cvs&&!r.bf&&ok(r)}).length,
     perMeal:target*0.35,bfKcal:target*0.25,bfPro:Math.max(25,Math.round(w*0.4)),
     bothLD:hasL&&hasD,hasBf:hasBf,hasLD:hasLD,nBf:bfP.length,
     bmr:bmr,tdee:tdee,bmi:bmi,target:target,goal:goal,protGoal:w*(goal==="cut"?1.6:1.8),nProt:protP.length}};
-  for(var d=0;d<days;d++){var meals=[];slots.forEach(function(sl){meals.push(buildMeal(sl,d))});PLAN.days.push(meals)}
+  for(var d=0;d<days;d++){var meals=[];PLAN.days.push(meals);slots.forEach(function(sl){meals.push(buildMeal(sl,d))})}
   renderPlan();
-  document.getElementById("plan-result-box").style.display="block";
+  var box=document.getElementById("plan-result-box");box.style.display="block";
+  setTimeout(function(){box.scrollIntoView({behavior:"smooth",block:"start"})},60);
+  toast("✅ 菜單與採買清單已生成");
 }
 
 function rerollMeal(d,m){
@@ -557,21 +686,22 @@ function toggleCvs(d,m){
   PLAN.days[d][m]=nm;renderPlan();toast(nm.cvs?"🏪 已改吃超商："+nm.all[0].r.name:"🍳 已改回自煮");
 }
 function rerollSingleItem(d,m,idx){
-  var c=PLAN.ctx,ml=PLAN.days[d][m],f;
+  var c=PLAN.ctx,ml=PLAN.days[d][m],f,ok=dayOk(d);
   if(ml.all.length===1)return;
-  if(idx===0)f=c.pc;else if(idx===1)f=c.pp;
-  else if(idx===2)f=function(){return pickVeg(ml.gl)};
-  else f=(ml.side==="fruit"?c.pf:c.pe);
+  if(idx===0)f=c.pc;
+  else if(idx===1)f=function(){return c.pp(ok)};
+  else if(idx===2)f=function(){return pickVeg(ml.gl,d)};
+  else f=function(){return ml.side==="fruit"?c.pf(ok):c.pe()};
   var nr=f();ml.all[idx].r=nr;
   // 換成高 GL 主食時，若蔬菜不是綠色蔬菜就一併換掉
-  if(idx===0&&glLevel(nr)!=="low"&&!isGreen(ml.all[2].r))ml.all[2].r=c.pvg();
+  if(idx===0&&glLevel(nr)!=="low"&&!isGreen(ml.all[2].r))ml.all[2].r=pickVeg(glLevel(nr),d);
   calcMeal(ml);renderPlan();toast("🔄 已更換菜色："+nr.name);
 }
 
 function saveCurrentPlan(){
   if(!PLAN) return;
   try{
-    localStorage.setItem("bento_saved_plan", JSON.stringify(PLAN));
+    localStorage.setItem("bento_saved_plan", JSON.stringify({days:PLAN.days}));
     toast("💾 成功保存本期備餐建議！");
   }catch(e){
     toast("⚠️ 保存失敗");
@@ -615,6 +745,7 @@ function closeSavedPlanModal(){
 }
 
 function renderPlan(){
+  refit();
   var c=PLAN.ctx,html="",market={},dayPro=0,n=0,nLD=0,pids={},glN=0,nCvs=0;
   PLAN.days.forEach(function(meals,d){
     html+='<div class="day-plan-card"><b style="color:var(--acc);">📅 第 '+(d+1)+" 天</b>";
@@ -647,6 +778,7 @@ function renderPlan(){
   if(c.hasLD)sm+="🍱 午／晚餐每餐抓約 <b>"+Math.round(c.perMeal)+"</b> kcal（各占全日 35%）<br>";
   sm+="每日蛋白質建議約 <b>"+Math.round(c.protGoal)+"</b> g；本菜單所選餐次平均每天提供約 <b>"+Math.round(dayPro/PLAN.days.length)+"</b> g<br>";
   if(glN)sm+='<span style="color:var(--seat);">🥦 有 '+glN+' 餐的主食升糖負荷偏高或中等，已自動提高綠色蔬菜份量。</span><br>';
+  if(PLAN.days.length>3)sm+='<span style="color:var(--seat);">🥬 易壞的葉菜已排在前 3 天內，後面幾天改用耐放蔬菜（高麗菜、花椰菜、小黃瓜…）。</span><br>';
   if(c.bmi>=BMI_WARN||c.bmi<18.5)sm+='<span style="color:var(--acc);">⚠️ 你的 BMI 約 '+r1(c.bmi)+(c.bmi>=BMI_WARN?"，已超過 "+BMI_WARN:"，低於 18.5")+'，建議先諮詢醫師與營養師再依菜單飲食。</span><br>';
   if(c.hasLD&&Object.keys(pids).length<nLD)sm+='<span style="color:var(--acc);">⚠️ 符合條件的午／晚餐蛋白質食譜只有 '+Object.keys(pids).length+' 道，部分餐點會重複；食譜庫變多就會更豐富。</span><br>';
   if(c.hasBf&&c.cvsSlots.indexOf("bf")<0&&c.nBf<2)sm+='<span style="color:var(--acc);">⚠️ 符合條件的早餐食譜只有 '+c.nBf+' 道，早餐會重複。</span><br>';
@@ -659,8 +791,7 @@ function renderPlan(){
     list.forEach(function(o){
       var ks=Object.keys(market).filter(function(k){return market[k].g===o[0]});if(!ks.length)return;cnt+=ks.length;
       h+='<div style="font-family:var(--fh);margin:12px 0 2px;color:var(--honey);">'+o[1]+"（"+ks.length+" 樣）</div>";t+="\n"+o[1]+"\n";
-      ks.forEach(function(k){var i=market[k],q=fmtQ(i);
-        h+='<div class="market-item"><span>• '+i.n+"</span><b>"+q+" "+i.u+"</b></div>";t+="• "+i.n+" "+q+" "+i.u+"\n"});
+      ks.forEach(function(k){var s=shopLine(market[k]);h+=s.h;t+=s.t});
     });
     return {h:h,t:t,n:cnt};
   }
@@ -672,7 +803,7 @@ function renderPlan(){
   if(P.n)tx+="\n— 常備調味料與堅果（家裡有的可略過）—"+(hint?"\n"+hint:"")+P.t;
   if(nCvs)tx+="\n🏪 另有 "+nCvs+" 餐吃超商，不需採買\n";
   PLAN.text=tx;
-  document.getElementById("shopping-ingredients").innerHTML='<div class="shop-head">🛍️ 生鮮採買 <b>'+F.n+'</b> 樣'+(P.n?' ｜ 常備調味料與堅果 <b>'+P.n+'</b> 樣（家裡有的可略過）':'')+(nCvs?' ｜ 🏪 超商 '+nCvs+' 餐':'')+'</div>'+F.h+
+  document.getElementById("shopping-ingredients").innerHTML='<div class="shop-head">🛍️ 生鮮採買 <b>'+F.n+'</b> 樣'+(P.n?' ｜ 常備調味料與堅果 <b>'+P.n+'</b> 樣（家裡有的可略過）':'')+(nCvs?' ｜ 🏪 超商 '+nCvs+' 餐':'')+'</div><div class="tip">🧺 數量已換算成超市／市場常見的包裝量，蔬果份量會自動微調，盡量整包用完。</div>'+F.h+
     (P.n?'<details class="pantry"><summary>🧂 常備調味料與堅果 '+P.n+' 樣（點開查看／收合）</summary>'+(hint?'<div class="tip">'+hint+'</div>':'')+P.h+'</details>':'');
 }
 
