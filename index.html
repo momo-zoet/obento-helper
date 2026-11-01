@@ -96,7 +96,6 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
         <button class="menu-item" id="tab-fridge" onclick="switchTab('fridge');closeMenu()">🧊 清冰箱</button>
         <button class="menu-item" id="tab-favs" onclick="switchTab('favs');closeMenu()">❤️ 我的食譜庫 (<span id="fav-count">0</span>)</button>
         <button class="menu-item" onclick="openSavedPlanModal();closeMenu()">📌 已保存的備餐</button>
-        <button class="menu-item" onclick="openOnePotModal();closeMenu()">🍳 懶人一鍋煮</button>
         <button class="menu-item" onclick="openDisclaimer();closeMenu()">⚠️ 使用前須知</button>
         <button class="menu-item" onclick="openAbout();closeMenu()">ℹ️ 關於本工具</button>
         <div class="menu-sep"></div>
@@ -108,7 +107,9 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
   <div id="page-recipes">
     <div id="season-now" class="tip" style="margin-bottom:14px;"></div>
     <input type="text" id="recipe-search" class="search-box" placeholder="🔍 搜尋食譜名稱或食材（例如：雞肉、高麗菜、舒肥...）" oninput="renderRecipes()">
+    <div class="categories" id="scene-list" style="margin-bottom:0;"></div>
     <div class="categories" id="cat-list"></div>
+    <div id="onepot-box"></div>
     <div class="grid" id="recipe-grid"></div>
   </div>
 
@@ -124,14 +125,16 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
     <div class="grid" id="fav-grid"></div>
   </div>
 
-    <div id="page-fridge" style="display:none;">
+      <div id="page-fridge" style="display:none;">
     <div class="plan-section">
       <h2 style="font-family:var(--fh);margin-top:0;">🧊 清冰箱</h2>
-      <div class="tip">先勾大類（整類都有），或點開類別，只勾你記得有的食材。系統會推薦食材最齊的菜，並優先提醒容易壞的食材。調味料與堅果預設家裡有，不列入缺料。</div>
+      <div class="tip">先勾大類（整類都有），或點開類別只勾你記得的食材；指定食材後還能填大概剩多少克。調味料與堅果預設家裡有，不列入缺料。</div>
       <div id="fridge-groups"></div>
-      <button class="tab-btn" onclick="clearFridge()">🧹 清除全部</button>
+      <div id="fridge-amounts"></div>
+      <button class="gen-btn" onclick="generateFridge()">✨ 推薦清冰箱料理</button>
+      <div style="text-align:right;margin-top:8px;"><button class="tab-btn" onclick="clearFridge()">🧹 清除全部</button></div>
     </div>
-    <div id="fridge-results"></div>
+    <div id="fridge-results" style="display:none;"></div>
   </div>
 
   <div id="page-plan" style="display:none;">
@@ -216,14 +219,6 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
   </div>
 </div>
 
-<div class="modal" id="onepot-modal" onclick="if(event.target===this)closeOnePotModal()">
-  <div class="modal-content" style="max-width:650px;">
-    <button class="close-modal" onclick="closeOnePotModal()" aria-label="關閉">✕</button>
-    <h2 style="font-family:var(--fh);margin-top:0;color:var(--acc);padding-right:30px;">🍳 懶人一鍋煮</h2>
-    <div id="onepot-content"></div>
-  </div>
-</div>
-
 <div class="modal" id="about-modal" onclick="if(event.target===this)closeAbout()">
   <div class="modal-content" style="max-width:650px;">
     <button class="close-modal" onclick="closeAbout()" aria-label="關閉">✕</button>
@@ -278,7 +273,7 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
 <!-- 食譜與產季資料 -->
 <script src="recipes.js"></script>
 <script>
-var currentCat="全部",view="recipes",openId=null,favorites=[],ONEPOT_IDS=[];
+var currentCat="全部",currentScene="全部",view="recipes",openId=null,favorites=[],ONEPOT_IDS=[];
 ONEPOT.forEach(function(g){g.sets.forEach(function(st){st.ids.forEach(function(id){if(ONEPOT_IDS.indexOf(id)<0)ONEPOT_IDS.push(id)})})});
 try{favorites=JSON.parse(localStorage.getItem("bento_favs")||"[]")}catch(e){}
 function saveFavs(){try{localStorage.setItem("bento_favs",JSON.stringify(favorites))}catch(e){}}
@@ -351,15 +346,18 @@ function importFavs(event){
 }
 
 function renderCategories(){
+  document.getElementById("scene-list").innerHTML=SCENES.map(function(c){
+    return '<button class="cat-chip '+(c===currentScene?"active":"")+'" onclick="filterScene(\''+c+'\')">'+c+'</button>'}).join("");
   document.getElementById("cat-list").innerHTML=CATEGORIES.map(function(c){
     return '<button class="cat-chip '+(c===currentCat?"active":"")+'" onclick="filterCat(\''+c+'\')">'+c+'</button>'}).join("");
 }
 function filterCat(c){currentCat=c;renderCategories();renderRecipes()}
+function filterScene(c){currentScene=c;renderCategories();renderRecipes()}
 function cardHtml(r){
   var f=favorites.indexOf(r.id)>-1;
   return '<div class="card" onclick="openRecipeModal('+r.id+')"><div class="card-header"><div><span class="emoji-icon">'+r.emoji+'</span><h3 class="card-title">'+r.name+'</h3></div>'+
   '<button class="fav-btn" aria-label="收藏" onclick="toggleFav('+r.id+',event)">'+(f?"❤️":"🤍")+'</button></div>'+
-  '<div class="badges">'+(r.cvs?'<span class="badge" style="background:var(--honey);color:#fff;">🏪 超商</span>':'<span class="badge">🍳 自煮</span>')+(r.bf?'<span class="badge season" style="background:var(--mk);color:var(--honey);">🌅 早餐</span>':'')+(ONEPOT_IDS.indexOf(r.id)>-1?'<span class="badge">🍳 一鍋煮</span>':'')+'<span class="badge">'+r.cat+'</span>'+seasonBadge(r)+
+  '<div class="badges">'+(r.cvs?'<span class="badge" style="background:var(--honey);color:#fff;">🏪 超商</span>':'')+(r.bf?'<span class="badge season" style="background:var(--mk);color:var(--honey);">🌅 早餐</span>':'')+(ONEPOT_IDS.indexOf(r.id)>-1?'<span class="badge">🍳 一鍋煮</span>':'')+'<span class="badge">'+r.cat+'</span>'+seasonBadge(r)+
   '<span class="badge">約 '+Math.round(kc(r))+' kcal</span></div>'+
   '<div style="font-size:13px;color:var(--sub);">點擊查看完整食譜與作法 ➔</div></div>';
 }
@@ -389,7 +387,9 @@ function renderRecipes(){
   }
 
   var list = RECIPES.filter(function(r){
-    var catMatch = (currentCat === "全部" || (currentCat === "🌅 早餐" ? !!r.bf : currentCat === "🏪 超商" ? !!r.cvs : currentCat === "🍳 一鍋煮" ? ONEPOT_IDS.indexOf(r.id)>-1 : r.cat === currentCat));
+    var sceneMatch = currentScene === "全部" || (currentScene === "🌅 早餐" ? !!r.bf : currentScene === "🏪 超商" ? !!r.cvs : ONEPOT_IDS.indexOf(r.id) > -1);
+    // 沒選「超商」情境、但選了食物類別時，不顯示超商組合
+    var catMatch = sceneMatch && (currentCat === "全部" || r.cat === currentCat) && !(r.cvs && currentScene !== "🏪 超商" && currentCat !== "全部");
     if(!catMatch) return false;
     if(!rawKw) return true;
 
@@ -405,6 +405,7 @@ function renderRecipes(){
     });
   });
   
+  document.getElementById("onepot-box").innerHTML = (currentScene === "🍳 一鍋煮" && !rawKw) ? onePotHtml() : "";
   var grid = document.getElementById("recipe-grid");
   grid.innerHTML = list.length ? list.map(cardHtml).join("") : '<div class="empty" style="grid-column:1/-1;">找不到符合關鍵字的食譜 🥺</div>';
 }
@@ -421,7 +422,7 @@ function openRecipeModal(id){
   var ex=Object.keys(r.x).map(function(k){return NAMES[k]+" "+r.x[k]+" 份"+(r.k==null&&k==="m"?"（"+TL[r.mf||"l"]+"）":r.k==null&&k==="d"?"（"+DL[r.df||"f"]+"）":"")}).join("、");
   document.getElementById("modal-body").innerHTML=
   '<h2 style="font-family:var(--fh);margin-top:0;padding-right:30px;">'+r.emoji+" "+r.name+"</h2>"+
-  '<p>'+(r.cvs?'<span class="badge">🏪 超商</span> ':'<span class="badge">🍳 自煮</span> ')+(r.bf?'<span class="badge">🌅 早餐</span> ':'')+'<span class="badge">'+r.cat+"</span> "+seasonBadge(r)+"</p>"+
+  '<p>'+(r.cvs?'<span class="badge">🏪 超商</span> ':'')+(ONEPOT_IDS.indexOf(r.id)>-1?'<span class="badge">🍳 一鍋煮</span> ':'')+(r.bf?'<span class="badge">🌅 早餐</span> ':'')+'<span class="badge">'+r.cat+"</span> "+seasonBadge(r)+"</p>"+
   seasonLine(r)+'<button class="tab-btn" id="modal-fav" onclick="toggleFav('+r.id+')"></button>'+
   '<p style="font-size:13px;color:var(--sub);">🔢 食物代換：'+ex+"｜約 "+Math.round(kc(r))+" kcal、蛋白質 "+Math.round(pr(r))+" g</p>"+
   '<h4 style="font-family:var(--fh);margin:12px 0 4px;color:var(--acc);">'+(r.cvs?"🏪 組合內容":"📦 食材清單")+'</h4><ul style="margin:0;padding-left:20px;font-size:14px;">'+ing+"</ul>"+
@@ -482,7 +483,7 @@ function chooseMains(pool,k,favFirst){
 function makeCarb(lean,favFirst){
   var kinds=[];document.querySelectorAll('input[name="carb"]:checked').forEach(function(e){kinds.push(e.value)});
   var mode=document.getElementById("white-mode").value;
-  var all=RECIPES.filter(function(r){return !r.bf&&!r.cvs&&r.cat==="全穀雜糧類"});
+  var all=RECIPES.filter(function(r){return !r.bf&&!r.cvs&&!r.op&&r.cat==="全穀雜糧類"});
   var p=all.filter(function(r){return kinds.indexOf(r.kind)>-1});if(!p.length)p=all;
   var wp=chooseMains(p.filter(function(r){return r.whole}),lean?2:0,favFirst),bp=chooseMains(p.filter(function(r){return !r.whole}),lean?1:0,favFirst);
   if(mode==="any")return picker(wp.concat(bp),favFirst);
@@ -673,7 +674,7 @@ function generatePlan(){
   var meat=["雞肉","牛肉","豬肉","海鮮"].some(function(p){return prefs.indexOf(p)>-1});
   function ok(r){if(r.type==="素食")return prefs.length>0;if(r.type==="蛋奶素")return meat||prefs.indexOf("蛋奶素")>-1;return prefs.indexOf(r.type)>-1}
   SEAS_FIRST=document.getElementById("prefer-season").checked;var kp=parseInt(document.getElementById("k-prot").value),kv=parseInt(document.getElementById("k-veg").value),lean=kp>0||kv>0;
-  function pool(f){return RECIPES.filter(function(r){return !r.bf&&!r.cvs&&f(r)})}
+  function pool(f){return RECIPES.filter(function(r){return !r.bf&&!r.cvs&&!r.op&&f(r)})}
   if(!prefs.length){toast("請至少勾選一種蛋白質偏好");return}
   // 蛋白質：肉類／海鮮依「買幾種」挑選；蛋與豆製品另外挑 1 種，不佔肉類名額
   var protAll=pool(function(r){return r.cat==="豆魚蛋肉類"&&ok(r)});
@@ -873,58 +874,87 @@ function renderPlan(){
 }
 
 /* ===== 清冰箱 ===== */
-var FR_G={},FR_I={},FR_OPEN={},FR_INIT=0,GRPMAP={};
+var FR_G={},FR_I={},FR_AMT={},FR_OPEN={},FR_INIT=0,GRPMAP={},FR_CNT=["雞蛋","皮蛋","鹹蛋"];
 Object.keys(FRIDGE_GROUPS).forEach(function(g){FRIDGE_GROUPS[g].forEach(function(n){GRPMAP[n]=g})});
 function frHave(n){return !!FR_I[n]||!!(GRPMAP[n]&&FR_G[GRPMAP[n]])}
 function keyIng(r){return r.ingredients.filter(function(i){return SEAS.indexOf(i.n)<0&&NUTS.indexOf(i.n)<0})}
-function toggleFrG(g){FR_G[g]=!FR_G[g];renderFridgeGroups();renderFridgeResults()}
-function toggleFrI(n){FR_I[n]=!FR_I[n];renderFridgeGroups();renderFridgeResults()}
-function clearFridge(){FR_G={};FR_I={};renderFridgeGroups();renderFridgeResults()}
+function toggleFrG(g){FR_G[g]=!FR_G[g];renderFridgeGroups()}
+function toggleFrI(n){FR_I[n]=!FR_I[n];if(!FR_I[n])delete FR_AMT[n];renderFridgeGroups();renderFridgeAmounts()}
+function clearFridge(){FR_G={};FR_I={};FR_AMT={};renderFridgeGroups();renderFridgeAmounts();document.getElementById("fridge-results").style.display="none"}
+function setAmt(n,v){var x=parseFloat(v);if(x>0)FR_AMT[n]=x;else delete FR_AMT[n]}
 function renderFridgeGroups(){
   document.getElementById("fridge-groups").innerHTML=Object.keys(FRIDGE_GROUPS).map(function(g){
     var on=FR_G[g];
     return '<details'+(FR_OPEN[g]?' open':'')+' ontoggle="FR_OPEN[\''+g+'\']=this.open" style="margin-bottom:8px;"><summary style="cursor:pointer;">'+
-      '<button class="cat-chip'+(on?' active':'')+'" onclick="event.preventDefault();toggleFrG(\''+g+'\')">'+g+'</button> <span style="font-size:12px;color:var(--sub);">點開可指定食材</span></summary>'+
+      '<button class="cat-chip'+(on?' active':'')+'" onclick="event.preventDefault();toggleFrG(\''+g+'\')">'+g+'</button> <span style="font-size:12px;color:var(--sub);">點開可指定食材與克數</span></summary>'+
       '<div class="checkbox-group" style="margin:8px 0 4px 6px;">'+FRIDGE_GROUPS[g].map(function(n){
         return '<button class="cat-chip'+((FR_I[n]||on)?' active':'')+'" onclick="toggleFrI(\''+n+'\')">'+n+'</button>'}).join("")+'</div></details>';
   }).join("");
 }
-function frCard(o){
-  var tags=(o.miss.length?'<span class="badge">缺：'+o.miss.join("、")+'</span>':'<span class="badge season">✅ 食材都有</span>')+
+function renderFridgeAmounts(){
+  var ks=Object.keys(FR_I).filter(function(k){return FR_I[k]});
+  document.getElementById("fridge-amounts").innerHTML=ks.length?'<div style="font-size:13.5px;color:var(--sub);margin:12px 0 4px;">📏 選填：大概還剩多少？沒填就當作夠用（量不夠一份時會標示）</div>'+ks.map(function(n){
+    return '<div class="row" style="align-items:center;margin:4px 0;"><span style="min-width:96px;">'+n+'</span><input type="number" min="0" placeholder="約多少" value="'+(FR_AMT[n]||"")+'" oninput="setAmt(\''+n+'\',this.value)" style="width:110px;padding:6px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;"> <span style="font-size:13px;color:var(--sub);">'+(FR_CNT.indexOf(n)>-1?"顆":"g")+'</span></div>'}).join(""):"";
+}
+// 評估一組食材：有／缺／份量；ings 為 {n,q,u}，q=0 代表只比對有無
+function frEval(ings){
+  var seen={},have=[],miss=[],notes=[],urg=0,srv=null;
+  ings.forEach(function(i){
+    if(seen[i.n])return;seen[i.n]=1;
+    if(!frHave(i.n)){miss.push(i.n);return}
+    var a=FR_I[i.n]?FR_AMT[i.n]:0;
+    if(a&&i.q>0&&(i.u==="g"||i.u==="顆")){
+      var s=a/i.q;
+      if(s<0.6){miss.push(i.n+"（剩約 "+a+" "+i.u+"，需 "+i.q+" "+i.u+"）");return}
+      if(s<1)notes.push(i.n+"略少，可減量");
+      srv=Math.min(srv==null?99:srv,Math.max(1,Math.floor(s)));
+    }
+    have.push(i.n);if((SHELF[i.n]||99)<=4)urg++;
+  });
+  return {have:have,miss:miss,notes:notes,urg:urg,srv:srv,ratio:have.length/Math.max(1,have.length+miss.length)};
+}
+function frTags(o){
+  return (o.miss.length?'<span class="badge">缺：'+o.miss.join("、")+'</span>':'<span class="badge season">✅ 食材都有</span>')+
+    (o.srv?'<span class="badge season">夠做約 '+o.srv+' 份</span>':'')+
+    (o.notes.length?'<span class="badge">'+o.notes.join("、")+'</span>':'')+
     (o.urg?'<span class="badge" style="background:var(--honey);color:#fff;">⏰ 有易壞食材，先用掉</span>':'');
-  return '<div class="day-plan-card"><span class="meal-item-link" onclick="openRecipeModal('+o.r.id+')">'+o.r.emoji+' '+o.r.name+'</span><div class="badges" style="margin:4px 0 0;">'+tags+'</div></div>';
+}
+function frCard(o){
+  return '<div class="day-plan-card"><span class="meal-item-link" onclick="openRecipeModal('+o.r.id+')">'+o.r.emoji+' '+o.r.name+'</span><div class="badges" style="margin:4px 0 0;">'+frTags(o)+'</div></div>';
+}
+function generateFridge(){
+  var any=Object.keys(FR_G).some(function(k){return FR_G[k]})||Object.keys(FR_I).some(function(k){return FR_I[k]});
+  if(!any){toast("請先勾選冰箱裡有的食材");return}
+  renderFridgeResults();
+  var box=document.getElementById("fridge-results");box.style.display="block";
+  setTimeout(function(){box.scrollIntoView({behavior:"smooth",block:"start"})},60);
+  toast("✅ 已推薦清冰箱料理");
 }
 function renderFridgeResults(){
-  var box=document.getElementById("fridge-results");
-  var any=Object.keys(FR_G).some(function(k){return FR_G[k]})||Object.keys(FR_I).some(function(k){return FR_I[k]});
-  if(!any){box.innerHTML='<div class="empty">勾選冰箱裡有的食材，就會推薦可以煮的菜 🧊</div>';return}
-  var rows=[];
+  var box=document.getElementById("fridge-results"),html="",rows=[];
   RECIPES.forEach(function(r){
-    if(r.bf||r.cvs||["豆魚蛋肉類","蔬菜類","全穀雜糧類"].indexOf(r.cat)<0)return;
-    var have=[],miss=[],urg=0;
-    keyIng(r).forEach(function(i){if(frHave(i.n)){have.push(i.n);if((SHELF[i.n]||99)<=4)urg++}else miss.push(i.n)});
-    if(have.length)rows.push({r:r,have:have,miss:miss,urg:urg,ratio:have.length/(have.length+miss.length)});
+    if(r.bf||r.cvs||r.op||["豆魚蛋肉類","蔬菜類","全穀雜糧類"].indexOf(r.cat)<0)return;
+    var o=frEval(keyIng(r));if(o.have.length){o.r=r;rows.push(o)}
   });
-  var html="";
-  // 一鍋煮組合：整組食材有 6 成以上、至少 2 樣
   var ops=[];
   ONEPOT.forEach(function(g){g.sets.forEach(function(st){
-    var seen={},have=[],miss=[];
-    st.ids.forEach(function(id){var r=byId(id);if(r)keyIng(r).forEach(function(i){if(seen[i.n])return;seen[i.n]=1;(frHave(i.n)?have:miss).push(i.n)})});
-    if(have.length>=2&&have.length/(have.length+miss.length)>=0.6)ops.push({g:g,st:st,miss:miss});
+    var ings=[];st.ids.forEach(function(id){var r=byId(id);if(r)ings=ings.concat(keyIng(r))});
+    (st.ing||[]).forEach(function(n){ings.push({n:n,q:0,u:""})});
+    var o=frEval(ings);
+    if(o.have.length>=2&&o.ratio>=0.6){o.g=g;o.st=st;ops.push(o)}
   })});
-  ops.sort(function(a,b){return a.miss.length-b.miss.length});
+  ops.sort(function(a,b){return a.miss.length-b.miss.length||b.urg-a.urg});
   if(ops.length)html+='<h3 style="font-family:var(--fh);color:var(--honey);">🍳 一鍋煮組合</h3>'+ops.slice(0,4).map(function(o){
-    return '<div class="day-plan-card"><b style="color:var(--acc);">'+o.g.tool+'｜'+o.st.name+'</b> <span class="badge">'+o.st.time+'</span> '+
-      (o.miss.length?'<span class="badge">缺：'+o.miss.join("、")+'</span>':'<span class="badge season">✅ 食材都有</span>')+
-      '<div style="margin:6px 0;line-height:2;">'+o.st.ids.map(function(id){var r=byId(id);return r?'<span class="meal-item-link" onclick="openRecipeModal('+id+')">'+r.emoji+' '+r.name+'</span>':''}).join('　')+'</div>'+
+    return '<div class="day-plan-card"><b style="color:var(--acc);">'+o.g.tool+'｜'+o.st.name+'</b> <span class="badge">'+o.st.time+'</span><div class="badges" style="margin:4px 0;">'+frTags(o)+'</div>'+
+      (o.st.ids.length?'<div style="margin:6px 0;line-height:2;">'+o.st.ids.map(function(id){var r=byId(id);return r?'<span class="meal-item-link" onclick="openRecipeModal('+id+')">'+r.emoji+' '+r.name+'</span>':''}).join('　')+'</div>':'')+
+      (o.st.ing?'<div style="font-size:13px;color:var(--sub);">食材：'+o.st.ing.join("、")+'</div>':'')+
       '<details><summary style="cursor:pointer;">看一鍋煮步驟</summary><ol style="margin:4px 0 0;padding-left:20px;">'+o.st.steps.map(function(x){return '<li>'+x+'</li>'}).join("")+'</ol></details></div>';
   }).join("");
   [["豆魚蛋肉類","🍖 主菜"],["蔬菜類","🥬 配菜"],["全穀雜糧類","🍚 主食"]].forEach(function(s){
     var l=rows.filter(function(o){return o.r.cat===s[0]&&o.ratio>=0.5}).sort(function(a,b){return b.ratio-a.ratio||b.urg-a.urg||b.have.length-a.have.length}).slice(0,6);
     if(l.length)html+='<h3 style="font-family:var(--fh);color:var(--honey);">'+s[1]+'</h3>'+l.map(frCard).join("");
   });
-  box.innerHTML=html||'<div class="empty">目前沒有食材夠的食譜，再多勾幾樣試試 🥺</div>';
+  box.innerHTML=(html||'<div class="empty">目前沒有食材夠的食譜，再多勾幾樣試試 🥺</div>')+'<div style="font-size:12px;color:var(--sub);margin-top:8px;">份量以一人份食譜用量比對；同一份食材被多道菜用到時不會重複扣除。</div>';
 }
 
 function copyText(t){
@@ -935,8 +965,8 @@ function copyText(t){
 function copyList(){var t=PLAN&&PLAN.text;if(!t)return;copyText(t)}
 function printPlan(){document.querySelectorAll('#shopping-ingredients details').forEach(function(x){x.open=true});window.print()}
 
-function openOnePotModal(){
-  var h='<p style="margin:0 0 6px;font-size:14px;color:var(--sub);">一口鍋做好幾樣：洗的鍋具少、顧火的時間少。點食譜名稱可看完整作法；時間為概估，依鍋具與食材大小調整。</p>';
+function onePotHtml(){
+  var h='<div class="plan-section"><p style="margin:0 0 6px;font-size:14px;color:var(--sub);">一口鍋做好幾樣：洗的鍋具少、顧火的時間少。點食譜名稱可看完整作法；時間為概估，依鍋具與食材大小調整。下方是單道食譜。</p>';
   ONEPOT.forEach(function(g){
     h+='<h3 style="font-family:var(--fh);margin:16px 0 2px;color:var(--honey);">'+g.tool+'</h3><div style="font-size:13px;color:var(--sub);margin-bottom:8px;">'+g.intro+'</div>';
     g.sets.forEach(function(st){
@@ -946,10 +976,8 @@ function openOnePotModal(){
     });
     h+='<div class="tip">'+g.tips.join('<br>')+'</div>';
   });
-  document.getElementById("onepot-content").innerHTML=h;
-  document.getElementById("onepot-modal").style.display="flex";
+  return h+'</div>';
 }
-function closeOnePotModal(){document.getElementById("onepot-modal").style.display="none"}
 function openAbout(){document.getElementById("about-bmi").textContent=BMI_WARN;document.getElementById("about-modal").style.display="flex"}
 function closeAbout(){document.getElementById("about-modal").style.display="none"}
 function openDisclaimer(){document.getElementById("disclaimer-modal").style.display="flex";document.getElementById("disc-ok").focus()}
