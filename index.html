@@ -132,8 +132,8 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
           <div class="checkbox-group"><span class="mealpair"><label><input type="checkbox" name="mealsel" value="bf" checked> 🌅 早餐</label><label class="cvs-chip" title="這餐改吃超商"><input type="checkbox" name="cvs" value="bf" onchange="this.parentNode.classList.toggle('on',this.checked)">🏪 超商</label></span><span class="mealpair"><label><input type="checkbox" name="mealsel" value="lunch" checked> ☀️ 午餐</label><label class="cvs-chip" title="這餐改吃超商"><input type="checkbox" name="cvs" value="lunch" onchange="this.parentNode.classList.toggle('on',this.checked)">🏪 超商</label></span><span class="mealpair"><label><input type="checkbox" name="mealsel" value="dinner" checked> 🌙 晚餐</label><label class="cvs-chip" title="這餐改吃超商"><input type="checkbox" name="cvs" value="dinner" onchange="this.parentNode.classList.toggle('on',this.checked)">🏪 超商</label></span></div>
           <div style="font-size:12px;color:var(--sub);margin-top:6px;">🏪 點亮「超商」的餐次會改從超商組合抽，不列入採買；產生菜單後也能逐餐切換。</div></div>
         <div class="form-group"><label>早餐口味</label>
-          <select id="bf-taste"><option value="mix" selected>鹹口味為主，偶爾甜口味（建議）</option><option value="salty">只吃鹹口味</option><option value="any">不限（含奶昔、甜燕麥）</option></select>
-          <div style="font-size:12px;color:var(--sub);margin-top:6px;">鹹口味（蛋、豆腐、肉類搭配全穀）通常比較不甜，升糖也較平緩。</div></div>
+          <select id="bf-taste"><option value="salty">🧂 鹹的（蛋、豆腐、肉類搭配全穀）</option><option value="sweet">🍯 甜的（奶昔、甜燕麥、優格碗）</option><option value="any" selected>🍽️ 都可以（鹹甜混搭）</option></select>
+          <div style="font-size:12px;color:var(--sub);margin-top:6px;">鹹口味通常比較不甜，升糖也較平緩；選「都可以」時，約每 4 餐會排 1 餐甜口味，其餘為鹹口味。</div></div>
         <div class="form-group"><label>健身目標</label>
           <select id="goal"><option value="cut">🔥 減脂期（熱量赤字）</option><option value="bulk">💪 增肌期（熱量盈餘）</option></select></div>
         <div class="form-group"><label>生理性別 / 年齡（限 18 歲以上）</label>
@@ -144,7 +144,8 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
           <input type="number" id="weight" value="65" min="30" max="200" style="width:50%;"></div></div>
         <div class="form-group"><label>日常活動量</label>
           <select id="act"><option value="1.2">久坐（幾乎不運動）</option><option value="1.375">輕度（每週運動 1–3 天）</option><option value="1.55" selected>中度（每週運動 3–5 天）</option><option value="1.725">高度（每週運動 6–7 天）</option></select></div>
-        <div class="form-group"><label>本週要買幾種蛋白質食材</label><select id="k-prot"><option value="0">不限（菜色最豐富）</option><option value="1">1 種</option><option value="2" selected>2 種</option><option value="3">3 種</option><option value="4">4 種</option></select></div>
+        <div class="form-group"><label>本週要買幾種肉／海鮮（蛋、豆腐另外算）</label><select id="k-prot"><option value="0">不限（菜色最豐富）</option><option value="1">1 種</option><option value="2" selected>2 種</option><option value="3">3 種</option><option value="4">4 種</option></select>
+          <div style="font-size:12px;color:var(--sub);margin-top:6px;">蛋與豆製品會另外固定 1 種，約每 4 餐排 1 餐，不會佔掉肉類的名額。</div></div>
         <div class="form-group"><label>本週要買幾種蔬菜</label><select id="k-veg"><option value="0">不限（菜色最豐富）</option><option value="2">2 種</option><option value="3" selected>3 種</option><option value="4">4 種</option><option value="5">5 種</option></select></div>
       </div>
       <div class="form-group" style="margin-bottom:16px;">
@@ -175,13 +176,13 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
     <div class="plan-section" id="plan-result-box" style="display:none;">
       <h3 style="font-family:var(--fh);margin-top:0;" id="result-title"></h3>
       <div class="sum" id="plan-summary"></div>
-      <div style="margin-bottom: 16px;">
-        <button class="tab-btn" style="background:var(--acc);color:#fff;border-color:var(--acc);" onclick="saveCurrentPlan()">💾 保存本期備餐建議</button>
-      </div>
       <div id="selected-recipes-list"></div>
       <div class="market-list">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;"><h3 style="font-family:var(--fh);margin:0;color:var(--honey);">🛒 菜市場合併總採買清單</h3><span class="noprint"><button class="tab-btn" onclick="copyList()">📋 複製清單</button> <button class="tab-btn" onclick="printPlan()">🖨️ 列印菜單與清單</button></span></div>
         <div id="shopping-ingredients"></div>
+      </div>
+      <div class="noprint" style="margin-top:16px;">
+        <button class="gen-btn" onclick="saveCurrentPlan()">💾 保存本期備餐建議（含採買清單）</button>
       </div>
     </div>
   </div>
@@ -480,15 +481,25 @@ function renderSeasonNow(){var f=[],v=[];
 function shelfOf(r){var m=99;r.ingredients.forEach(function(i){var s=SHELF[i.n];if(s&&s<m)m=s});return m}
 function dayOk(d){return function(r){return d<shelfOf(r)}}
 function isSavory(r){return SAVORY.indexOf(r.id)>-1}
-// 早餐：鹹口味為主，每 4 餐插入 1 餐甜口味
+// 早餐口味：salty＝只鹹、sweet＝只甜、any＝鹹甜混搭（每 4 餐插入 1 餐甜口味）
 function makeBf(list,taste,lean,favFirst){
   var sv=chooseMains(list.filter(isSavory),lean?3:0,favFirst),sw=chooseMains(list.filter(function(r){return !isSavory(r)}),lean?2:0,favFirst);
-  var ps=picker(sv,favFirst),pw=picker(sw,favFirst),pa=picker(chooseMains(list,lean?3:0,favFirst),favFirst),i=0;
+  var ps=picker(sv,favFirst),pw=picker(sw,favFirst),i=0;
   return function(ok){
-    if(taste==="any")return pa(ok);
+    if(taste==="sweet")return sw.length?pw(ok):ps(ok);
     if(!sv.length)return pw(ok);
     if(taste==="salty"||!sw.length)return ps(ok);
     i++;return i%4===0?pw(ok):ps(ok);
+  };
+}
+
+// 午晚餐蛋白質：肉類／海鮮為主，蛋與豆製品另外算、約每 4 餐排 1 餐，不佔肉類名額
+function makeProt(meatC,nonC,favFirst){
+  var pm=picker(meatC,favFirst),pn=picker(nonC,favFirst),i=0;
+  return function(ok){
+    if(!meatC.length)return pn(ok);
+    if(!nonC.length)return pm(ok);
+    i++;return i%4===0?pn(ok):pm(ok);
   };
 }
 
@@ -629,8 +640,12 @@ function generatePlan(){
   function ok(r){if(r.type==="素食")return prefs.length>0;if(r.type==="蛋奶素")return meat||prefs.indexOf("蛋奶素")>-1;return prefs.indexOf(r.type)>-1}
   SEAS_FIRST=document.getElementById("prefer-season").checked;var kp=parseInt(document.getElementById("k-prot").value),kv=parseInt(document.getElementById("k-veg").value),lean=kp>0||kv>0;
   function pool(f){return RECIPES.filter(function(r){return !r.bf&&!r.cvs&&f(r)})}
-  var protP=chooseMains(pool(function(r){return r.cat==="豆魚蛋肉類"&&ok(r)}),kp,favFirst);
   if(!prefs.length){toast("請至少勾選一種蛋白質偏好");return}
+  // 蛋白質：肉類／海鮮依「買幾種」挑選；蛋與豆製品另外挑 1 種，不佔肉類名額
+  var protAll=pool(function(r){return r.cat==="豆魚蛋肉類"&&ok(r)});
+  function isMeat(r){return ["雞肉","牛肉","豬肉","海鮮"].indexOf(r.type)>-1}
+  var meatC=chooseMains(protAll.filter(isMeat),kp,favFirst),nonC=chooseMains(protAll.filter(function(r){return !isMeat(r)}),kp>0?1:0,favFirst);
+  var protP=meatC.concat(nonC);
   var taste=document.getElementById("bf-taste").value;
 
   // 蔬菜：依保存期限排；超過 3 天的菜單一定要有耐放蔬菜
@@ -658,7 +673,7 @@ function generatePlan(){
   var bmr=10*w+6.25*h-5*age+(male?5:-161),tdee=bmr*act,bmi=w/((h/100)*(h/100));
   var target=Math.max(bmr,tdee*(goal==="cut"?0.85:1.1));
   PLAN={days:[],ctx:{
-    pc:makeCarb(lean,favFirst),pp:picker(protP,favFirst),
+    pc:makeCarb(lean,favFirst),pp:makeProt(meatC,nonC,favFirst),
     pv:picker(vegC,favFirst),pvg:picker(gp,favFirst),vegPool:vegC,greenPool:gp,
     pf:picker(chooseMains(pool(function(r){return r.cat==="水果類"}),lean?2:0,favFirst),favFirst),
     pe:picker(pool(function(r){return (r.cat==="乳製品類"&&ok(r))||r.cat==="油脂與堅果"}),favFirst),
@@ -698,46 +713,61 @@ function rerollSingleItem(d,m,idx){
   calcMeal(ml);renderPlan();toast("🔄 已更換菜色："+nr.name);
 }
 
+// 保存：菜單 ＋ 採買清單（HTML 與純文字）一起存
 function saveCurrentPlan(){
   if(!PLAN) return;
   try{
-    localStorage.setItem("bento_saved_plan", JSON.stringify({days:PLAN.days}));
-    toast("💾 成功保存本期備餐建議！");
+    var shop=document.getElementById("shopping-ingredients");
+    localStorage.setItem("bento_saved_plan", JSON.stringify({
+      days:PLAN.days,
+      shopHtml:shop?shop.innerHTML:"",
+      shopText:PLAN.text||"",
+      savedAt:Date.now()
+    }));
+    toast("💾 已保存備餐建議與採買清單！");
   }catch(e){
     toast("⚠️ 保存失敗");
   }
 }
 
 function openSavedPlanModal(){
-  var savedStr = localStorage.getItem("bento_saved_plan");
+  var savedStr = null;
+  try{savedStr = localStorage.getItem("bento_saved_plan")}catch(e){}
   var container = document.getElementById("saved-plan-content");
   if(!savedStr){
-    container.innerHTML = '<div class="empty">目前沒有保存的備餐建議<br>請先至「備餐與採買」生成並點擊「保存本期備餐建議」！</div>';
+    container.innerHTML = '<div class="empty">目前沒有保存的備餐建議<br>請先至「備餐與採買」生成並點擊頁面最下方的「保存本期備餐建議」！</div>';
   }else{
     try{
       var p = JSON.parse(savedStr);
-      var html = '<div style="font-size:14px;margin-bottom:12px;color:var(--sub);">以下是您先前儲存的備餐內容：</div>';
-      var market = {};
-      
+      var when = p.savedAt ? new Date(p.savedAt).toLocaleString("zh-TW",{hour12:false}) : "";
+      var html = '<div style="font-size:14px;margin-bottom:12px;color:var(--sub);">以下是您先前儲存的備餐內容'+(when?'（保存於 '+when+'）':'')+'：</div>';
+
       p.days.forEach(function(meals, d){
         html += '<div class="day-plan-card"><b style="color:var(--acc);">📅 第 '+(d+1)+" 天</b>";
         meals.forEach(function(ml, m){
-          ml.all.forEach(function(it){it.r.ingredients.forEach(function(i){
-            var key=i.n+"|"+i.u;if(!market[key])market[key]={n:i.n,u:i.u,q:0,g:gOf(i,it.r)};market[key].q+=i.q*it.s})});
-          
-          html += '<div class="meal">'+(SLOT_LABEL[ml.slot||(m===0?"lunch":"dinner")])+'<br>'+
+          html += '<div class="meal">'+(SLOT_LABEL[ml.slot||(m===0?"lunch":"dinner")])+(ml.cvs?' <span class="badge" style="background:var(--honey);color:#fff;">🏪 超商</span>':'')+'<br>'+
             ml.all.map(function(it){return '<span class="meal-item-link" onclick="openRecipeModal('+it.r.id+')">'+it.r.emoji+" "+it.r.name+'</span>'+(it.s!==1?"（份量 ×"+it.s+"）":"")}).join("<br>")+
             "<small>約 "+Math.round(ml.kcal)+" kcal｜蛋白質 "+Math.round(ml.pro)+" g</small></div>";
         });
         html += "</div>";
       });
-      
-      container.innerHTML = html + '<div style="margin-top:16px;text-align:right;"><button class="tab-btn" onclick="localStorage.removeItem(\'bento_saved_plan\');openSavedPlanModal();toast(\'🗑️ 已清除保存的備餐\')">🗑️ 清除保存紀錄</button></div>';
+
+      if(p.shopHtml){
+        html += '<div class="market-list"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;"><h3 style="font-family:var(--fh);margin:0;color:var(--honey);">🛒 保存的採買清單</h3>'+
+          (p.shopText?'<button class="tab-btn" onclick="copySavedList()">📋 複製清單</button>':'')+'</div>'+p.shopHtml+'</div>';
+      }else{
+        html += '<div class="tip">這份是舊版保存的備餐，沒有附採買清單；重新生成並保存一次就會一起存下來。</div>';
+      }
+
+      container.innerHTML = html + '<div style="margin-top:16px;text-align:right;"><button class="tab-btn" onclick="try{localStorage.removeItem(\'bento_saved_plan\')}catch(e){}openSavedPlanModal();toast(\'🗑️ 已清除保存的備餐\')">🗑️ 清除保存紀錄</button></div>';
     }catch(e){
       container.innerHTML = '<div class="empty">讀取保存資料時發生錯誤</div>';
     }
   }
   document.getElementById("saved-plan-modal").style.display="flex";
+}
+function copySavedList(){
+  try{var p=JSON.parse(localStorage.getItem("bento_saved_plan"));if(p&&p.shopText)copyText(p.shopText)}catch(e){toast("複製失敗")}
 }
 
 function closeSavedPlanModal(){
@@ -807,12 +837,12 @@ function renderPlan(){
     (P.n?'<details class="pantry"><summary>🧂 常備調味料與堅果 '+P.n+' 樣（點開查看／收合）</summary>'+(hint?'<div class="tip">'+hint+'</div>':'')+P.h+'</details>':'');
 }
 
-function copyList(){
-  var t=PLAN&&PLAN.text;if(!t)return;
+function copyText(t){
   function fb(){var a=document.createElement("textarea");a.value=t;a.style.cssText="position:fixed;opacity:0";document.body.appendChild(a);a.select();
     var ok=false;try{ok=document.execCommand("copy")}catch(e){}document.body.removeChild(a);toast(ok?"📋 已複製採買清單":"複製失敗，請手動選取清單文字")}
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast("📋 已複製採買清單")},fb);else fb();
 }
+function copyList(){var t=PLAN&&PLAN.text;if(!t)return;copyText(t)}
 function printPlan(){document.querySelectorAll('#shopping-ingredients details').forEach(function(x){x.open=true});window.print()}
 
 function openOnePotModal(){
