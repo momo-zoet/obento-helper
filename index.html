@@ -259,6 +259,7 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
 
 <!-- 食譜與產季資料 -->
 <script src="recipes.js"></script>
+<script src="recipes_extra.js"></script>
 <script>
 var currentCat="全部",view="recipes",openId=null,favorites=[];
 try{favorites=JSON.parse(localStorage.getItem("bento_favs")||"[]")}catch(e){}
@@ -349,11 +350,14 @@ function cardHtml(r){
 var SYNONYMS = {
   "雞": ["雞肉", "雞胸", "雞腿", "雞翅"],
   "雞肉": ["雞胸", "雞腿", "雞翅"],
-  "豬": ["豬肉", "豬排", "豬里肌", "培根"],
-  "豬肉": ["豬排", "豬里肌", "培根"],
-  "牛": ["牛肉", "牛排", "牛腩"],
-  "牛肉": ["牛排", "牛腩"],
+  "豬": ["豬肉", "豬排", "豬里肌", "豬梅花", "梅花", "培根"],
+  "豬肉": ["豬排", "豬里肌", "豬梅花", "梅花", "培根"],
+  "牛": ["牛肉", "牛排", "牛腩", "牛里肌"],
+  "牛肉": ["牛排", "牛腩", "牛里肌"],
+  "魚": ["鮭魚", "鱸魚", "鱈魚", "鯖魚", "鯛魚", "鮪魚", "吻仔魚", "小魚"],
   "海鮮": ["蝦", "魚", "鮭魚", "干貝", "花枝", "透抽"],
+  "豆腐": ["板豆腐", "嫩豆腐", "豆干"],
+  "蛋": ["雞蛋", "皮蛋", "鹹蛋"],
   "菜": ["蔬菜", "高麗菜", "花椰菜", "地瓜葉", "菠菜", "青菜"]
 };
 
@@ -377,7 +381,9 @@ function renderRecipes(){
       var ingMatch = r.ingredients.some(function(i){ return i.n.toLowerCase().indexOf(kw) > -1; });
       var catTextMatch = r.cat.toLowerCase().indexOf(kw) > -1;
       var bfMatch = !!r.bf && kw.length > 0 && "早餐".indexOf(kw) > -1;
-      return nameMatch || ingMatch || catTextMatch || bfMatch;
+      // 類型比對：搜尋「牛肉」「雞肉」「豬肉」「海鮮」「素食」時，直接依食譜的蛋白質類型比對
+      var typeMatch = !!r.type && /[\u4e00-\u9fa5]/.test(r.type) && r.type.toLowerCase().indexOf(kw) > -1;
+      return nameMatch || ingMatch || catTextMatch || bfMatch || typeMatch;
     });
   });
   
@@ -649,7 +655,8 @@ function generatePlan(){
   var taste=document.getElementById("bf-taste").value;
 
   // 蔬菜：依保存期限排；超過 3 天的菜單一定要有耐放蔬菜
-  var vegAll=pool(function(r){return r.cat==="蔬菜類"}),vegC=chooseMains(vegAll,kv,favFirst);
+  // 含蝦米、小魚、蛋等動物性食材的蔬菜食譜，要符合蛋白質偏好才會排進來（純素的不受影響）
+  var vegAll=pool(function(r){return r.cat==="蔬菜類"&&(r.type==="veg"||ok(r))}),vegC=chooseMains(vegAll,kv,favFirst);
   function longLived(r){return shelfOf(r)>=days}
   function addMain(list,cands){
     var cs=cands.filter(function(r){return list.indexOf(r)<0});if(!cs.length)return list;
