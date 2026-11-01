@@ -127,7 +127,7 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
     <div class="plan-section" id="plan-form">
       <h2 style="font-family:var(--fh);margin-top:0;">⚙️ 身體資料與備餐設定</h2>
       <div class="form-grid">
-        <div class="form-group"><label>備餐天數 (天)</label><input type="number" id="days" value="5" min="1" max="7"></div>
+        <div class="form-group"><label>備餐天數 (天)</label><input type="number" id="days" value="5" min="1" max="7" step="1" oninput="if(this.value!==''){var v=Math.floor(+this.value);this.value=v>7?7:v<1?1:v}"></div>
         <div class="form-group"><label>要準備的餐次（可複選）</label>
           <div class="checkbox-group"><span class="mealpair"><label><input type="checkbox" name="mealsel" value="bf" checked> 🌅 早餐</label><label class="cvs-chip" title="這餐改吃超商"><input type="checkbox" name="cvs" value="bf" onchange="this.parentNode.classList.toggle('on',this.checked)">🏪 超商</label></span><span class="mealpair"><label><input type="checkbox" name="mealsel" value="lunch" checked> ☀️ 午餐</label><label class="cvs-chip" title="這餐改吃超商"><input type="checkbox" name="cvs" value="lunch" onchange="this.parentNode.classList.toggle('on',this.checked)">🏪 超商</label></span><span class="mealpair"><label><input type="checkbox" name="mealsel" value="dinner" checked> 🌙 晚餐</label><label class="cvs-chip" title="這餐改吃超商"><input type="checkbox" name="cvs" value="dinner" onchange="this.parentNode.classList.toggle('on',this.checked)">🏪 超商</label></span></div>
           <div style="font-size:12px;color:var(--sub);margin-top:6px;">🏪 點亮「超商」的餐次會改從超商組合抽，不列入採買；產生菜單後也能逐餐切換。</div></div>
@@ -141,7 +141,7 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
           <input type="number" id="age" value="28" min="18" max="90" style="width:50%;"></div></div>
         <div class="form-group"><label>身高 (cm) / 體重 (kg)</label>
           <div class="row"><input type="number" id="height" value="165" min="120" max="230" style="width:50%;">
-          <input type="number" id="weight" value="65" min="30" max="200" style="width:50%;"></div></div>
+          <input type="number" id="weight" value="65" min="10" max="300" step="any" oninput="if(+this.value>=1000)this.value=this.value.slice(0,3)" style="width:50%;"></div></div>
         <div class="form-group"><label>日常活動量</label>
           <select id="act"><option value="1.2">久坐（幾乎不運動）</option><option value="1.375">輕度（每週運動 1–3 天）</option><option value="1.55" selected>中度（每週運動 3–5 天）</option><option value="1.725">高度（每週運動 6–7 天）</option></select></div>
         <div class="form-group"><label>本週要買幾種肉／海鮮（蛋、豆腐另外算）</label><select id="k-prot"><option value="0">不限（菜色最豐富）</option><option value="1">1 種</option><option value="2" selected>2 種</option><option value="3">3 種</option><option value="4">4 種</option></select>
@@ -255,6 +255,13 @@ details.pantry summary{cursor:pointer;font-family:var(--fh);color:var(--honey);p
 </div>
 
 <div style="text-align:center;font-size:12px;color:var(--sub);padding:0 16px 40px;">⚠️ 熱量與份量為估算值；食材請依個人過敏與飲食需求自行判斷。<br>🌱 當季資料整理自農糧署《臺灣主要水果產期分布》與農委會（現農業部）蔬菜產期資料；葡萄柚、草莓、西瓜、山藥及其他標示「公開資料整理」的品項僅供參考。</div>
+<div class="modal" id="bmi-modal" style="z-index:40" role="alertdialog" aria-modal="true" onclick="if(event.target===this)closeBmiModal()">
+  <div class="modal-content disc-box">
+    <h2>🩺 建議先諮詢醫師</h2>
+    <p id="bmi-modal-text" style="font-size:14.5px;margin:0 0 12px;"></p>
+    <button class="gen-btn" onclick="closeBmiModal()">我知道了</button>
+  </div>
+</div>
 <div id="toast"></div>
 
 <!-- 食譜與產季資料 -->
@@ -578,6 +585,8 @@ function shopLine(i){
 var PLAN=null;
 var SLOT_NAME={bf:"早餐",lunch:"午餐",dinner:"晚餐"},SLOT_LABEL={bf:"🌅 早餐",lunch:"☀️ 午餐",dinner:"🌙 晚餐"};
 var BMI_WARN=27;           // 啟動視窗與菜單提醒用的 BMI 門檻（國健署：≥24 過重、≥27 肥胖）
+var BMI_LOW_STOP=16,BMI_HIGH_STOP=35; // 超出此範圍：跳提醒並不產生菜單
+function closeBmiModal(){document.getElementById("bmi-modal").style.display="none"}
 var GL_HIGH=40,GL_MID=30;  // 1 份主食的升糖負荷門檻
 function glOf(r){var gi=typeof GI!=="undefined"&&GI[r.id];return gi&&r.x.g?gi/100*r.x.g*15:0}
 function glLevel(r){var g=glOf(r);return g>=GL_HIGH?"high":g>=GL_MID?"mid":"low"}
@@ -632,13 +641,21 @@ function buildMeal(slot,d,forceCvs){
 function generatePlan(){
   var ageRaw=parseFloat(document.getElementById("age").value);
   if(!isNaN(ageRaw)&&ageRaw<18){toast("本工具僅適用 18 歲以上成人，未滿 18 歲請與家長及營養師討論");return}
+  var wRaw=parseFloat(document.getElementById("weight").value),hRaw=parseFloat(document.getElementById("height").value);
+  if(isNaN(wRaw)||wRaw<10||wRaw>=1000){toast("體重請輸入兩位數以上的數字（kg）");return}
+  if(isNaN(hRaw)||hRaw<120||hRaw>230){toast("身高請輸入 120–230 cm");return}
+  var bmi0=wRaw/((hRaw/100)*(hRaw/100));
+  if(bmi0<BMI_LOW_STOP||bmi0>BMI_HIGH_STOP){
+    document.getElementById("bmi-modal-text").innerHTML="你輸入的身高體重換算 BMI 約 <b>"+r1(bmi0)+"</b>，"+(bmi0<BMI_LOW_STOP?"體重明顯過輕":"體重明顯過重")+"。這已超出本工具適合的範圍，請<b>先就醫，由醫師或營養師評估</b>後再安排飲食。若數字輸入有誤，請修正後再試一次。";
+    document.getElementById("bmi-modal").style.display="flex";return;
+  }
   var slots=[];document.querySelectorAll('input[name="mealsel"]:checked').forEach(function(e){slots.push(e.value)});
   if(!slots.length){toast("請至少勾選一個餐次");return}
   var hasBf=slots.indexOf("bf")>-1,hasL=slots.indexOf("lunch")>-1,hasD=slots.indexOf("dinner")>-1,hasLD=hasL||hasD;
   var cvsSlots=[];document.querySelectorAll('input[name="cvs"]:checked').forEach(function(e){if(slots.indexOf(e.value)>-1)cvsSlots.push(e.value)});
   var days=Math.round(num("days",5,1,7));
   var goal=document.getElementById("goal").value,male=document.getElementById("gender").value==="male";
-  var age=num("age",28,18,90),h=num("height",165,120,230),w=num("weight",65,30,200),act=parseFloat(document.getElementById("act").value);
+  var age=num("age",28,18,90),h=num("height",165,120,230),w=num("weight",65,10,300),act=parseFloat(document.getElementById("act").value);
   var prefs=[];document.querySelectorAll('input[name="pref"]:checked').forEach(function(e){prefs.push(e.value)});
   var favFirst=document.getElementById("prefer-fav").checked;
   var meat=["雞肉","牛肉","豬肉","海鮮"].some(function(p){return prefs.indexOf(p)>-1});
